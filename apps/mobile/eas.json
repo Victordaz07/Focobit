@@ -8,15 +8,11 @@
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "simulator": false,
-        "enterpriseProvisioning": "adhoc"
-      },
+      "ios": { "simulator": false, "enterpriseProvisioning": "adhoc" },
       "android": { "buildType": "apk" }
     },
     "production": {
       "autoIncrement": true,
-      "ios": { "buildType": "release" },
       "android": { "buildType": "app-bundle" }
     }
   },
