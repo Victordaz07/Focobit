@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth, usePushNotifications } from '../hooks'
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, profile } = useAuth()
+  usePushNotifications()
   const router = useRouter()
   const segments = useSegments()
 

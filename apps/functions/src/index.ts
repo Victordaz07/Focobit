@@ -1,6 +1,6 @@
-export * from './tasks'
-export * from './gamification'
-export * from './routines'
-export * from './focus'
-export * from './webhooks/alexa'
-export * from './webhooks/google-assistant'
+import * as admin from 'firebase-admin'
+admin.initializeApp()
+
+export { onTaskCompleted } from './gamification'
+export { checkStreaksPaused, sendRoutineReminders, sendNightRoutineReminders } from './notifications'
+export { onWeeklyChallengeTick, generateChallengesForUser } from './challenges'

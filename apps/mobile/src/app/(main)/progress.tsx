@@ -3,8 +3,9 @@ import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useGamificationStore, useTasksStore } from '../../stores'
-import { getGamificationProfile, getFirestoreDb, doc, getDoc } from '@focobit/firebase-config'
+import { useAuthStore, useGamificationStore, useTasksStore, useChallengesStore } from '../../stores'
+import { useChallenges } from '../../hooks'
+import { getGamificationProfile, getFirestoreDb, doc, getDoc, getUnlockedAchievements, ACHIEVEMENTS_CATALOG } from '@focobit/firebase-config'
 import { Skills, SkillName } from '@focobit/shared'
 import { SKILL_PERKS, getLevelTitle, xpToNextLevel } from '@focobit/shared'
 
@@ -20,8 +21,12 @@ export default function ProgressScreen() {
   const { profile: gamProfile, setProfile, level, xpPercent } = useGamificationStore()
   const { tasks } = useTasksStore()
   const [skills, setSkills] = useState<Skills | null>(null)
+  const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const { weeklyChallenge } = useChallengesStore()
   const uid = user?.uid ?? ''
+
+  useChallenges()
 
   useEffect(() => {
     if (!uid) return
@@ -31,6 +36,8 @@ export default function ProgressScreen() {
       const db = getFirestoreDb()
       const skillsSnap = await getDoc(doc(db, 'users', uid, 'skills', 'profile'))
       if (skillsSnap.exists()) setSkills(skillsSnap.data() as Skills)
+      const achievements = await getUnlockedAchievements(uid)
+      setUnlockedAchievements(achievements.map(a => a.id))
       setLoading(false)
     }
     load()
@@ -158,15 +165,54 @@ export default function ProgressScreen() {
         )
       })}
 
-      {/* Logros placeholder */}
-      <Text style={styles.sectionTitle}>LOGROS</Text>
+      {/* Retos semanales */}
+      <Text style={styles.sectionTitle}>RETOS DE LA SEMANA</Text>
+      {weeklyChallenge ? (
+        weeklyChallenge.challenges.map((challenge, i) => (
+          <View key={i} style={[styles.challengeCard, challenge.completed && styles.challengeComplete]}>
+            <View style={styles.challengeTop}>
+              <Text style={styles.challengeTitle}>{challenge.title}</Text>
+              {challenge.completed && <Text style={styles.challengeDone}>✓</Text>}
+            </View>
+            <View style={styles.challengeBar}>
+              <View style={[
+                styles.challengeFill,
+                { width: `${Math.min(100, (challenge.currentCount / challenge.targetCount) * 100)}%` }
+              ]} />
+            </View>
+            <View style={styles.challengeBottom}>
+              <Text style={styles.challengeProgress}>
+                {challenge.currentCount}/{challenge.targetCount}
+              </Text>
+              <Text style={styles.challengeReward}>
+                +{challenge.xpReward} XP  +{challenge.coinReward} 🪙
+              </Text>
+            </View>
+          </View>
+        ))
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyCardText}>Cargando retos de la semana...</Text>
+        </View>
+      )}
+
+      {/* Logros */}
+      <Text style={[styles.sectionTitle, { marginTop: 16 }]}>LOGROS</Text>
       <View style={styles.achievementsGrid}>
-        {ACHIEVEMENTS_PREVIEW.map((a, i) => {
-          const unlocked = checkAchievement(a.id, gamProfile, tasks.length)
+        {ACHIEVEMENTS_CATALOG.map(achievement => {
+          const unlocked = unlockedAchievements.includes(achievement.id)
           return (
-            <View key={i} style={[styles.achievementCard, !unlocked && styles.achievementLocked]}>
-              <Text style={styles.achievementEmoji}>{unlocked ? a.emoji : '🔒'}</Text>
-              <Text style={styles.achievementTitle}>{a.title}</Text>
+            <View
+              key={achievement.id}
+              style={[styles.achievementCard, !unlocked && styles.achievementLocked]}
+            >
+              <Text style={styles.achievementEmoji}>
+                {unlocked ? achievement.emoji : '🔒'}
+              </Text>
+              <Text style={styles.achievementTitle}>{achievement.title}</Text>
+              {!unlocked && (
+                <Text style={styles.achievementDesc}>{achievement.description}</Text>
+              )}
             </View>
           )
         })}
@@ -194,32 +240,6 @@ function StatCard({ emoji, value, label, color = '#FFFFFF' }: {
 
 function formatPerk(perk: string): string {
   return perk.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
-const ACHIEVEMENTS_PREVIEW = [
-  { id: 'first_task', emoji: '✅', title: 'Primera tarea' },
-  { id: 'first_focus', emoji: '⏱', title: 'Primer focus' },
-  { id: 'streak_3', emoji: '🔥', title: 'Racha de 3 días' },
-  { id: 'level_3', emoji: '⚡', title: 'Nivel 3' },
-  { id: 'tasks_10', emoji: '💪', title: '10 tareas' },
-  { id: 'focus_5', emoji: '🧠', title: '5 sesiones focus' },
-]
-
-function checkAchievement(
-  id: string,
-  gam: { totalTasksCompleted?: number; totalFocusSessions?: number; streakDays?: number; level?: number } | null,
-  taskCount: number
-): boolean {
-  if (!gam) return false
-  switch (id) {
-    case 'first_task':  return (gam.totalTasksCompleted ?? 0) >= 1
-    case 'first_focus': return (gam.totalFocusSessions ?? 0) >= 1
-    case 'streak_3':    return (gam.streakDays ?? 0) >= 3
-    case 'level_3':     return (gam.level ?? 1) >= 3
-    case 'tasks_10':    return (gam.totalTasksCompleted ?? 0) >= 10
-    case 'focus_5':     return (gam.totalFocusSessions ?? 0) >= 5
-    default: return false
-  }
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -270,6 +290,19 @@ const styles = StyleSheet.create({
   skillXP: { color: '#A7A9BE', fontSize: 11, textAlign: 'right' },
 
   achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  challengeCard: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, marginBottom: 10 },
+  challengeComplete: { borderWidth: 1, borderColor: '#6C63FF' },
+  challengeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  challengeTitle: { color: '#FFFFFF', fontWeight: '600', fontSize: 14, flex: 1 },
+  challengeDone: { color: '#6C63FF', fontSize: 18, fontWeight: '800', marginLeft: 8 },
+  challengeBar: { height: 6, backgroundColor: '#2A2A40', borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
+  challengeFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 3 },
+  challengeBottom: { flexDirection: 'row', justifyContent: 'space-between' },
+  challengeProgress: { color: '#A7A9BE', fontSize: 12 },
+  challengeReward: { color: '#6C63FF', fontSize: 12, fontWeight: '600' },
+  emptyCard: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 20, alignItems: 'center' },
+  emptyCardText: { color: '#A7A9BE', fontSize: 14 },
+  achievementDesc: { color: '#A7A9BE', fontSize: 10, textAlign: 'center', marginTop: 2 },
   achievementCard: { width: '30%', backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
   achievementLocked: { opacity: 0.4 },
   achievementEmoji: { fontSize: 28 },

@@ -3,7 +3,8 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useTasksStore, useGamificationStore } from '../../stores'
+import { useAuthStore, useTasksStore, useGamificationStore, useChallengesStore } from '../../stores'
+import { useChallenges } from '../../hooks'
 import { subscribeToTasks, completeTask, getGamificationProfile } from '@focobit/firebase-config'
 import { EnergyLevel } from '@focobit/shared'
 
@@ -13,6 +14,9 @@ export default function TodayScreen() {
   const { profile: gamProfile, setProfile: setGamProfile, level, xpPercent } = useGamificationStore()
   const [crisisMode, setCrisisMode] = useState(false)
   const [loading, setLoading] = useState(true)
+  const { newAchievements, clearNewAchievements } = useChallengesStore()
+  const latestAchievement = newAchievements[0] ?? null
+  useChallenges()
 
   const uid = user?.uid ?? ''
   const todayTasks = getTodayTasks()
@@ -166,6 +170,25 @@ export default function TodayScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Modal nuevo logro */}
+      <Modal visible={!!latestAchievement} transparent animationType="fade">
+        <View style={styles.crisisOverlay}>
+          <View style={styles.crisisCard}>
+            <Text style={{ fontSize: 56, marginBottom: 8 }}>
+              {latestAchievement?.emoji ?? '🏆'}
+            </Text>
+            <Text style={styles.crisisTitle}>¡Logro desbloqueado!</Text>
+            <Text style={[styles.crisisBody, { fontSize: 18, color: '#6C63FF', fontWeight: '700' }]}>
+              {latestAchievement?.title}
+            </Text>
+            <Text style={styles.crisisBody}>{latestAchievement?.description}</Text>
+            <TouchableOpacity style={styles.crisisOk} onPress={clearNewAchievements}>
+              <Text style={styles.crisisOkText}>¡Genial! 🎉</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Crisis */}
       <Modal visible={crisisMode} transparent animationType="fade">

@@ -3,7 +3,7 @@ export { COLLECTIONS } from './collections'
 export {
   getFirebaseAuth, signInWithEmail, signUpWithEmail,
   signInWithGoogleCredential, signInWithAppleCredential,
-  signInWithGoogleWeb, signOutUser, onAuthChanged,
+  signOutUser, onAuthChanged, signInWithGoogleWeb,
 } from './auth'
 export type { User } from './auth'
 export {
@@ -26,3 +26,12 @@ export {
   createRoutine, subscribeToRoutines,
   completeRoutineStep, completeRoutine, deleteRoutine,
 } from './routineService'
+export {
+  getOrCreateWeeklyChallenges, subscribeToWeeklyChallenges,
+} from './challengesService'
+export type { Challenge, WeeklyChallenge } from './challengesService'
+export {
+  getUnlockedAchievements, checkAndUnlockAchievements,
+  ACHIEVEMENTS_CATALOG,
+} from './achievementsService'
+export type { Achievement } from './achievementsService'
