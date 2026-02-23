@@ -3,11 +3,11 @@ import {
   View, Text, TouchableOpacity, ScrollView,
   StyleSheet, Modal, ActivityIndicator, Alert,
 } from 'react-native'
-import { useAuthStore, useGamificationStore } from '../../stores'
+import { useAuthStore, useGamificationStore, useThemeStore } from '../../stores'
 import {
   getUserStoreData, purchaseItem, equipItem, activatePowerUp,
 } from '@focobit/firebase-config'
-import { ITEMS_BY_CATEGORY, type StoreItem, type StoreItemCategory } from '@focobit/shared'
+import { ITEMS_BY_CATEGORY, type StoreItem, type StoreItemCategory, type AppTheme } from '@focobit/shared'
 import { trackEvent } from '../../hooks/useAnalytics'
 
 const CATEGORIES: { id: StoreItemCategory; label: string; emoji: string }[] = [
@@ -17,7 +17,59 @@ const CATEGORIES: { id: StoreItemCategory; label: string; emoji: string }[] = [
   { id: 'badge', label: 'Badges', emoji: '🏅' },
 ]
 
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bg },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
+    title: { fontSize: 28, fontWeight: '800', color: theme.text },
+    coinsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.surface, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
+    coinsEmoji: { fontSize: 16 },
+    coinsVal: { fontSize: 18, fontWeight: '800', color: '#FFD60A' },
+    tabs: { paddingHorizontal: 16, marginBottom: 8, flexGrow: 0 },
+    tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: theme.surface },
+    tabActive: { backgroundColor: theme.accent },
+    tabEmoji: { fontSize: 16 },
+    tabLabel: { fontSize: 14, fontWeight: '600', color: theme.textMuted },
+    tabLabelActive: { color: theme.text },
+    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10 },
+    itemCard: { width: '47%', backgroundColor: theme.surface, borderRadius: 14, padding: 16, alignItems: 'center', gap: 8, borderWidth: 2, borderColor: 'transparent', position: 'relative' },
+    itemCardOwned: { borderColor: theme.green + '22' },
+    itemCardEquipped: { borderColor: theme.accent },
+    itemCardLocked: { opacity: 0.4 },
+    equippedDot: { position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: theme.accent },
+    itemEmoji: { fontSize: 32 },
+    itemTitle: { fontSize: 14, fontWeight: '700', color: theme.text, textAlign: 'center' },
+    itemTitleLocked: { color: theme.textMuted },
+    lockLabel: { fontSize: 12, color: theme.textMuted, fontWeight: '600' },
+    ownedLabel: { fontSize: 11, color: theme.green, fontWeight: '600' },
+    priceRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    priceEmoji: { fontSize: 14 },
+    priceVal: { fontSize: 15, fontWeight: '800', color: '#FFD60A' },
+    priceInsufficient: { color: theme.danger },
+    modalOverlay: { flex: 1, backgroundColor: '#00000080', justifyContent: 'flex-end' },
+    modalSheet: { backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, alignItems: 'center', gap: 10 },
+    modalEmoji: { fontSize: 56 },
+    modalTitle: { fontSize: 22, fontWeight: '800', color: theme.text },
+    modalDesc: { fontSize: 14, color: theme.textMuted, textAlign: 'center', lineHeight: 22 },
+    modalPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    modalPriceEmoji: { fontSize: 18 },
+    modalPriceVal: { fontSize: 16, fontWeight: '700', color: '#FFD60A' },
+    modalBalance: { fontSize: 13 },
+    modalBalanceOk: { color: theme.green },
+    modalBalanceLow: { color: theme.danger },
+    modalActions: { width: '100%', gap: 10, marginTop: 8 },
+    primaryBtn: { backgroundColor: theme.accent, borderRadius: 14, padding: 16, alignItems: 'center' },
+    primaryBtnDisabled: { opacity: 0.4 },
+    primaryBtnText: { color: theme.text, fontWeight: '800', fontSize: 16 },
+    cancelBtn: { borderRadius: 14, padding: 14, alignItems: 'center' },
+    cancelBtnText: { color: theme.textMuted, fontWeight: '600', fontSize: 15 },
+  })
+}
+
 export default function StoreScreen() {
+  const { theme } = useThemeStore()
+  const s = createStyles(theme)
   const { user } = useAuthStore()
   const { profile: gamProfile } = useGamificationStore()
   const [category, setCategory] = useState<StoreItemCategory>('powerup')
@@ -140,7 +192,7 @@ export default function StoreScreen() {
       {/* Grid de ítems */}
       {loading ? (
         <View style={s.loadingWrap}>
-          <ActivityIndicator color="#6C63FF" size="large" />
+          <ActivityIndicator color={theme.accent} size="large" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.grid}>
@@ -254,50 +306,3 @@ export default function StoreScreen() {
   )
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
-  title: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
-  coinsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1A1A2E', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8 },
-  coinsEmoji: { fontSize: 16 },
-  coinsVal: { fontSize: 18, fontWeight: '800', color: '#FFD60A' },
-  tabs: { paddingHorizontal: 16, marginBottom: 8, flexGrow: 0 },
-  tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginRight: 8, backgroundColor: '#1A1A2E' },
-  tabActive: { backgroundColor: '#6C63FF' },
-  tabEmoji: { fontSize: 16 },
-  tabLabel: { fontSize: 14, fontWeight: '600', color: '#A7A9BE' },
-  tabLabelActive: { color: '#FFFFFF' },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10 },
-  itemCard: { width: '47%', backgroundColor: '#1A1A2E', borderRadius: 14, padding: 16, alignItems: 'center', gap: 8, borderWidth: 2, borderColor: 'transparent', position: 'relative' },
-  itemCardOwned: { borderColor: '#4ECDC422' },
-  itemCardEquipped: { borderColor: '#6C63FF' },
-  itemCardLocked: { opacity: 0.4 },
-  equippedDot: { position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: '#6C63FF' },
-  itemEmoji: { fontSize: 32 },
-  itemTitle: { fontSize: 14, fontWeight: '700', color: '#FFFFFF', textAlign: 'center' },
-  itemTitleLocked: { color: '#A7A9BE' },
-  lockLabel: { fontSize: 12, color: '#A7A9BE', fontWeight: '600' },
-  ownedLabel: { fontSize: 11, color: '#4ECDC4', fontWeight: '600' },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  priceEmoji: { fontSize: 14 },
-  priceVal: { fontSize: 15, fontWeight: '800', color: '#FFD60A' },
-  priceInsufficient: { color: '#FF6B6B' },
-  modalOverlay: { flex: 1, backgroundColor: '#00000080', justifyContent: 'flex-end' },
-  modalSheet: { backgroundColor: '#1A1A2E', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 28, alignItems: 'center', gap: 10 },
-  modalEmoji: { fontSize: 56 },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: '#FFFFFF' },
-  modalDesc: { fontSize: 14, color: '#A7A9BE', textAlign: 'center', lineHeight: 22 },
-  modalPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  modalPriceEmoji: { fontSize: 18 },
-  modalPriceVal: { fontSize: 16, fontWeight: '700', color: '#FFD60A' },
-  modalBalance: { fontSize: 13 },
-  modalBalanceOk: { color: '#4ECDC4' },
-  modalBalanceLow: { color: '#FF6B6B' },
-  modalActions: { width: '100%', gap: 10, marginTop: 8 },
-  primaryBtn: { backgroundColor: '#6C63FF', borderRadius: 14, padding: 16, alignItems: 'center' },
-  primaryBtnDisabled: { opacity: 0.4 },
-  primaryBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
-  cancelBtn: { borderRadius: 14, padding: 14, alignItems: 'center' },
-  cancelBtnText: { color: '#A7A9BE', fontWeight: '600', fontSize: 15 },
-})

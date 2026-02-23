@@ -2,17 +2,68 @@ import { useEffect, useRef, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView,
 } from 'react-native'
-import { useAuthStore, useTasksStore, useFocusStore, useGamificationStore } from '../../stores'
+import { useAuthStore, useTasksStore, useFocusStore, useGamificationStore, useThemeStore } from '../../stores'
 import {
   startFocusSession, completeFocusSession,
   abandonFocusSession, awardXPForAction, updateStreak,
 } from '@focobit/firebase-config'
-import { FocusDuration } from '@focobit/shared'
+import { FocusDuration, type AppTheme } from '@focobit/shared'
 import { trackEvent } from '../../hooks/useAnalytics'
 
 const DURATIONS: FocusDuration[] = [5, 10, 15, 20, 25]
 
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bg },
+    scroll: { padding: 24, paddingTop: 56, paddingBottom: 48 },
+    heading: { fontSize: 28, fontWeight: '800', color: theme.text, marginBottom: 8 },
+    sub: { color: theme.textMuted, fontSize: 15, marginBottom: 16, marginTop: 8 },
+    durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
+    durationBtn: { width: '28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surface, borderRadius: 16, borderWidth: 2, borderColor: theme.surface2 },
+    durationBtnActive: { borderColor: theme.accent, backgroundColor: theme.accentDim },
+    durationNum: { fontSize: 28, fontWeight: '800', color: theme.textMuted },
+    durationNumActive: { color: theme.accent },
+    durationMin: { fontSize: 12, color: theme.textMuted },
+    durationMinActive: { color: theme.accent },
+    taskScroll: { marginBottom: 24 },
+    taskChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.surface, borderWidth: 2, borderColor: theme.surface2, marginRight: 8 },
+    taskChipActive: { borderColor: theme.accent, backgroundColor: theme.accentDim },
+    taskChipText: { color: theme.textMuted, fontSize: 13 },
+    taskChipTextActive: { color: theme.text, fontWeight: '600' },
+    startBtn: { backgroundColor: theme.accent, borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 8 },
+    startBtnText: { color: theme.text, fontSize: 18, fontWeight: '800' },
+    timerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+    timerLabel: { color: theme.textMuted, fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 12 },
+    timerTask: { color: theme.accent, fontSize: 15, fontWeight: '600', marginBottom: 20, textAlign: 'center' },
+    timerDisplay: { fontSize: 80, fontWeight: '800', color: theme.text, fontVariant: ['tabular-nums'] },
+    progressBar: { width: '80%', height: 8, backgroundColor: theme.surface2, borderRadius: 4, overflow: 'hidden', marginTop: 20 },
+    progressFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 4 },
+    xpHint: { color: theme.accent, fontSize: 14, fontWeight: '600', marginTop: 12 },
+    motivational: { color: theme.textMuted, fontSize: 15, marginTop: 8, textAlign: 'center' },
+    timerActions: { flexDirection: 'row', gap: 12, marginTop: 40 },
+    pauseBtn: { flex: 1, backgroundColor: theme.surface, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: theme.surface2 },
+    pauseBtnText: { color: theme.text, fontWeight: '700', fontSize: 16 },
+    resumeBtn: { flex: 1, backgroundColor: theme.accent, borderRadius: 14, padding: 16, alignItems: 'center' },
+    resumeBtnText: { color: theme.text, fontWeight: '700', fontSize: 16 },
+    abandonBtn: { paddingHorizontal: 20, paddingVertical: 16, borderRadius: 14, borderWidth: 2, borderColor: theme.surface2, alignItems: 'center' },
+    abandonBtnText: { color: theme.textMuted, fontWeight: '700', fontSize: 16 },
+    rewardOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+    rewardCard: { backgroundColor: theme.surface, borderRadius: 24, padding: 32, alignItems: 'center', width: '100%' },
+    rewardEmoji: { fontSize: 56, marginBottom: 12 },
+    rewardTitle: { fontSize: 28, fontWeight: '800', color: theme.text, marginBottom: 4 },
+    rewardSub: { color: theme.textMuted, fontSize: 15, marginBottom: 20 },
+    rewardRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+    rewardBadge: { backgroundColor: theme.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+    rewardBadgeText: { color: theme.text, fontWeight: '700', fontSize: 16 },
+    levelUp: { color: '#FFD700', fontSize: 18, fontWeight: '800', marginBottom: 16 },
+    rewardBtn: { backgroundColor: theme.accent, borderRadius: 14, padding: 16, width: '100%', alignItems: 'center', marginTop: 8 },
+    rewardBtnText: { color: theme.text, fontWeight: '700', fontSize: 16 },
+  })
+}
+
 export default function FocusScreen() {
+  const { theme } = useThemeStore()
+  const styles = createStyles(theme)
   const { user } = useAuthStore()
   const { tasks } = useTasksStore()
   const focus = useFocusStore()
@@ -242,64 +293,3 @@ function motivationalPhrase(duration: FocusDuration): string {
   }
   return phrases[duration]
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  scroll: { padding: 24, paddingTop: 56, paddingBottom: 48 },
-  heading: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
-  sub: { color: '#A7A9BE', fontSize: 15, marginBottom: 16, marginTop: 8 },
-
-  durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  durationBtn: {
-    width: '28%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#1A1A2E', borderRadius: 16, borderWidth: 2, borderColor: '#2A2A40',
-  },
-  durationBtnActive: { borderColor: '#6C63FF', backgroundColor: '#1E1B3A' },
-  durationNum: { fontSize: 28, fontWeight: '800', color: '#A7A9BE' },
-  durationNumActive: { color: '#6C63FF' },
-  durationMin: { fontSize: 12, color: '#A7A9BE' },
-  durationMinActive: { color: '#6C63FF' },
-
-  taskScroll: { marginBottom: 24 },
-  taskChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#1A1A2E', borderWidth: 2, borderColor: '#2A2A40', marginRight: 8,
-  },
-  taskChipActive: { borderColor: '#6C63FF', backgroundColor: '#1E1B3A' },
-  taskChipText: { color: '#A7A9BE', fontSize: 13 },
-  taskChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
-
-  startBtn: { backgroundColor: '#6C63FF', borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 8 },
-  startBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-
-  // Timer
-  timerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  timerLabel: { color: '#A7A9BE', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 12 },
-  timerTask: { color: '#6C63FF', fontSize: 15, fontWeight: '600', marginBottom: 20, textAlign: 'center' },
-  timerDisplay: { fontSize: 80, fontWeight: '800', color: '#FFFFFF', fontVariant: ['tabular-nums'] },
-  progressBar: { width: '80%', height: 8, backgroundColor: '#2A2A40', borderRadius: 4, overflow: 'hidden', marginTop: 20 },
-  progressFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 4 },
-  xpHint: { color: '#6C63FF', fontSize: 14, fontWeight: '600', marginTop: 12 },
-  motivational: { color: '#A7A9BE', fontSize: 15, marginTop: 8, textAlign: 'center' },
-
-  timerActions: { flexDirection: 'row', gap: 12, marginTop: 40 },
-  pauseBtn: { flex: 1, backgroundColor: '#1A1A2E', borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: '#2A2A40' },
-  pauseBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-  resumeBtn: { flex: 1, backgroundColor: '#6C63FF', borderRadius: 14, padding: 16, alignItems: 'center' },
-  resumeBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-  abandonBtn: { paddingHorizontal: 20, paddingVertical: 16, borderRadius: 14, borderWidth: 2, borderColor: '#2A2A40', alignItems: 'center' },
-  abandonBtnText: { color: '#A7A9BE', fontWeight: '700', fontSize: 16 },
-
-  // Reward modal
-  rewardOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  rewardCard: { backgroundColor: '#1A1A2E', borderRadius: 24, padding: 32, alignItems: 'center', width: '100%' },
-  rewardEmoji: { fontSize: 56, marginBottom: 12 },
-  rewardTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
-  rewardSub: { color: '#A7A9BE', fontSize: 15, marginBottom: 20 },
-  rewardRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  rewardBadge: { backgroundColor: '#6C63FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  rewardBadgeText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-  levelUp: { color: '#FFD700', fontSize: 18, fontWeight: '800', marginBottom: 16 },
-  rewardBtn: { backgroundColor: '#6C63FF', borderRadius: 14, padding: 16, width: '100%', alignItems: 'center', marginTop: 8 },
-  rewardBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-})

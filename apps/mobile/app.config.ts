@@ -17,6 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.focobit.app',
+    googleServicesFile: './GoogleService-Info.plist',
     buildNumber: '1',
     infoPlist: {
       NSCameraUsageDescription: 'Focobit necesita acceso a la cámara para la foto de perfil.',
@@ -48,7 +49,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-build-properties',
       {
         ios: { deploymentTarget: '16.0' },
-        android: { compileSdkVersion: 34, targetSdkVersion: 34, buildToolsVersion: '34.0.0' },
+        android: {
+          compileSdkVersion: 34,
+          targetSdkVersion: 34,
+          buildToolsVersion: '34.0.0',
+          googleServicesFile: './google-services.json',
+        },
       },
     ],
   ],

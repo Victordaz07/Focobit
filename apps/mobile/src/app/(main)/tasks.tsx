@@ -3,18 +3,92 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, Modal, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useTasksStore, useOfflineStore } from '../../stores'
+import { useAuthStore, useTasksStore, useOfflineStore, useThemeStore } from '../../stores'
 import {
   subscribeToTasks, createTask, completeTask,
   generateMicroStepsForTask, updateTaskMicroSteps, toggleMicroStep,
 } from '@focobit/firebase-config'
-import { Task, EnergyLevel, TaskPriority, CreateTaskInput, addPendingOp, getPendingOps } from '@focobit/shared'
+import { Task, EnergyLevel, TaskPriority, CreateTaskInput, addPendingOp, getPendingOps, type AppTheme } from '@focobit/shared'
 import { trackEvent } from '../../hooks/useAnalytics'
 import { startTrace } from '../../hooks/usePerformance'
 
 type FilterTab = 'all' | 'urgent' | 'someday'
 
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bg, paddingTop: 56 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
+    heading: { fontSize: 24, fontWeight: '800', color: theme.text },
+    addBtn: { backgroundColor: theme.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+    addBtnText: { color: theme.text, fontWeight: '700', fontSize: 14 },
+    filterRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+    filterTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: theme.surface },
+    filterTabActive: { backgroundColor: theme.accent },
+    filterText: { color: theme.textMuted, fontSize: 13 },
+    filterTextActive: { color: theme.text, fontWeight: '700' },
+    list: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+    taskCard: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: theme.surface, borderRadius: 12, padding: 14, marginBottom: 8,
+    },
+    taskDone: { opacity: 0.4 },
+    taskLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+    checkCircle: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+    checkIcon: { color: theme.accent, fontSize: 13, fontWeight: '700' },
+    taskInfo: { flex: 1 },
+    taskTitle: { color: theme.text, fontSize: 15, fontWeight: '600' },
+    done: { textDecorationLine: 'line-through', color: theme.textMuted },
+    taskMeta: { color: theme.textMuted, fontSize: 12, marginTop: 2 },
+    priorityDot: { fontSize: 16 },
+    empty: { alignItems: 'center', marginTop: 60 },
+    emptyEmoji: { fontSize: 40 },
+    emptyText: { color: theme.textMuted, marginTop: 12, fontSize: 16 },
+  })
+}
+
+function createModalStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+    sheet: { backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 12 },
+    title: { fontSize: 20, fontWeight: '700', color: theme.text, marginBottom: 4 },
+    meta: { color: theme.textMuted, fontSize: 14, marginBottom: 8 },
+    label: { color: theme.textMuted, fontSize: 13, fontWeight: '600', marginTop: 4 },
+    input: { backgroundColor: theme.bg, borderRadius: 12, padding: 14, color: theme.text, fontSize: 16, borderWidth: 1, borderColor: theme.surface2 },
+    row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: theme.surface2, borderWidth: 2, borderColor: 'transparent' },
+    chipActive: { borderColor: theme.accent, backgroundColor: theme.accentDim },
+    chipText: { color: theme.textMuted, fontSize: 13 },
+    chipTextActive: { color: theme.text, fontWeight: '700' },
+    actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+    cancelBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: theme.surface2, alignItems: 'center' },
+    cancelText: { color: theme.textMuted, fontWeight: '600' },
+    saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: theme.accent, alignItems: 'center' },
+    saveBtnDisabled: { opacity: 0.4 },
+    saveText: { color: theme.text, fontWeight: '700' },
+    progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    progressBar: { flex: 1, height: 6, backgroundColor: theme.bg, borderRadius: 3, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 3 },
+    progressLabel: { color: theme.textMuted, fontSize: 12, width: 32, textAlign: 'right' },
+    aiPrompt: { backgroundColor: theme.bg, borderRadius: 14, padding: 20, alignItems: 'center', gap: 8 },
+    aiPromptEmoji: { fontSize: 36 },
+    aiPromptTitle: { color: theme.text, fontWeight: '700', fontSize: 16, textAlign: 'center' },
+    aiPromptSub: { color: theme.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 },
+    aiBtn: { backgroundColor: theme.accent, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
+    aiBtnDisabled: { opacity: 0.5 },
+    aiBtnText: { color: theme.text, fontWeight: '700', fontSize: 15 },
+    regenerateBtn: { alignItems: 'center', paddingVertical: 8 },
+    regenerateBtnText: { color: theme.textMuted, fontSize: 13 },
+    errorText: { color: theme.danger, fontSize: 13, textAlign: 'center' },
+    stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+    stepCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+    stepText: { color: theme.text, fontSize: 15, flex: 1 },
+    stepDuration: { color: theme.textMuted, fontSize: 12 },
+  })
+}
+
 export default function TasksScreen() {
+  const { theme } = useThemeStore()
+  const styles = createStyles(theme)
   const { user } = useAuthStore()
   const { tasks, setTasks } = useTasksStore()
   const { isOnline, setPendingCount } = useOfflineStore()
@@ -95,7 +169,7 @@ export default function TasksScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#6C63FF" style={{ marginTop: 48 }} />
+        <ActivityIndicator color={theme.accent} style={{ marginTop: 48 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {filtered.length === 0 ? (
@@ -145,11 +219,13 @@ export default function TasksScreen() {
         visible={showAdd}
         uid={uid}
         onClose={() => setShowAdd(false)}
+        theme={theme}
       />
 
       {/* Modal: Detalle de tarea */}
       {showDetail && (
         <TaskDetailModal
+          theme={theme}
           task={showDetail}
           uid={uid}
           onClose={() => setShowDetail(null)}
@@ -163,8 +239,9 @@ export default function TasksScreen() {
 // ─── Add Task Modal ───────────────────────────────────────────────────────────
 
 function AddTaskModal({
-  visible, uid, onClose,
-}: { visible: boolean; uid: string; onClose: () => void }) {
+  visible, uid, onClose, theme,
+}: { visible: boolean; uid: string; onClose: () => void; theme: AppTheme }) {
+  const modal = createModalStyles(theme)
   const [title, setTitle] = useState('')
   const [energy, setEnergy] = useState<EnergyLevel>('medium')
   const [priority, setPriority] = useState<TaskPriority>('normal')
@@ -191,7 +268,7 @@ function AddTaskModal({
           <TextInput
             style={modal.input}
             placeholder="¿Qué necesitas hacer?"
-            placeholderTextColor="#A7A9BE"
+            placeholderTextColor={theme.textMuted}
             value={title}
             onChangeText={setTitle}
             autoFocus
@@ -249,8 +326,9 @@ function AddTaskModal({
 // ─── Task Detail Modal ────────────────────────────────────────────────────────
 
 function TaskDetailModal({
-  task, uid, onClose, onComplete,
-}: { task: Task; uid: string; onClose: () => void; onComplete: () => void }) {
+  task, uid, onClose, onComplete, theme,
+}: { task: Task; uid: string; onClose: () => void; onComplete: () => void; theme: AppTheme }) {
+  const modal = createModalStyles(theme)
   const [steps, setSteps] = useState(task.microSteps ?? [])
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
@@ -305,7 +383,7 @@ function TaskDetailModal({
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
-              <Text style={{ color: '#A7A9BE', fontSize: 20 }}>✕</Text>
+              <Text style={{ color: theme.textMuted, fontSize: 20 }}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -328,10 +406,10 @@ function TaskDetailModal({
                   style={[modal.stepRow, step.done && { opacity: 0.5 }]}
                   onPress={() => handleToggleStep(step.id, !step.done)}
                 >
-                  <View style={[modal.stepCheck, step.done && { backgroundColor: '#6C63FF' }]}>
-                    {step.done && <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>✓</Text>}
+                  <View style={[modal.stepCheck, step.done && { backgroundColor: theme.accent }]}>
+                    {step.done && <Text style={{ color: theme.text, fontSize: 11, fontWeight: '700' }}>✓</Text>}
                   </View>
-                  <Text style={[modal.stepText, step.done && { textDecorationLine: 'line-through', color: '#A7A9BE' }]}>
+                  <Text style={[modal.stepText, step.done && { textDecorationLine: 'line-through', color: theme.textMuted }]}>
                     {step.title}
                   </Text>
                   {step.durationMin != null && (
@@ -356,7 +434,7 @@ function TaskDetailModal({
               >
                 {generating ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator color={theme.text} size="small" />
                     <Text style={modal.aiBtnText}>Pensando...</Text>
                   </View>
                 ) : (
@@ -405,87 +483,3 @@ function energyLabel(e: EnergyLevel) {
 function priorityLabel(p: TaskPriority) {
   return p === 'urgent' ? '🔴 Urgente' : p === 'normal' ? '🟡 Normal' : '☁️ Algún día'
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17', paddingTop: 56 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
-  heading: { fontSize: 24, fontWeight: '800', color: '#FFFFFF' },
-  addBtn: { backgroundColor: '#6C63FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  addBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  filterRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
-  filterTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#1A1A2E' },
-  filterTabActive: { backgroundColor: '#6C63FF' },
-  filterText: { color: '#A7A9BE', fontSize: 13 },
-  filterTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  list: { padding: 20, paddingTop: 0, paddingBottom: 40 },
-  taskCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#1A1A2E', borderRadius: 12, padding: 14, marginBottom: 8,
-  },
-  taskDone: { opacity: 0.4 },
-  taskLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
-  checkCircle: {
-    width: 26, height: 26, borderRadius: 13,
-    borderWidth: 2, borderColor: '#6C63FF',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  checkIcon: { color: '#6C63FF', fontSize: 13, fontWeight: '700' },
-  taskInfo: { flex: 1 },
-  taskTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  done: { textDecorationLine: 'line-through', color: '#A7A9BE' },
-  taskMeta: { color: '#A7A9BE', fontSize: 12, marginTop: 2 },
-  priorityDot: { fontSize: 16 },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyEmoji: { fontSize: 40 },
-  emptyText: { color: '#A7A9BE', marginTop: 12, fontSize: 16 },
-})
-
-const modal = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#1A1A2E', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 12 },
-  title: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
-  meta: { color: '#A7A9BE', fontSize: 14, marginBottom: 8 },
-  label: { color: '#A7A9BE', fontSize: 13, fontWeight: '600', marginTop: 4 },
-  input: {
-    backgroundColor: '#0F0E17', borderRadius: 12, padding: 14,
-    color: '#FFFFFF', fontSize: 16, borderWidth: 1, borderColor: '#2A2A40',
-  },
-  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#2A2A40', borderWidth: 2, borderColor: 'transparent' },
-  chipActive: { borderColor: '#6C63FF', backgroundColor: '#1E1B3A' },
-  chipText: { color: '#A7A9BE', fontSize: 13 },
-  chipTextActive: { color: '#FFFFFF', fontWeight: '700' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#2A2A40', alignItems: 'center' },
-  cancelText: { color: '#A7A9BE', fontWeight: '600' },
-  saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#6C63FF', alignItems: 'center' },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveText: { color: '#FFFFFF', fontWeight: '700' },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  progressBar: { flex: 1, height: 6, backgroundColor: '#0F0E17', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 3 },
-  progressLabel: { color: '#A7A9BE', fontSize: 12, width: 32, textAlign: 'right' },
-  aiPrompt: { backgroundColor: '#0F0E17', borderRadius: 14, padding: 20, alignItems: 'center', gap: 8 },
-  aiPromptEmoji: { fontSize: 36 },
-  aiPromptTitle: { color: '#FFFFFF', fontWeight: '700', fontSize: 16, textAlign: 'center' },
-  aiPromptSub: { color: '#A7A9BE', fontSize: 13, textAlign: 'center', lineHeight: 20 },
-  aiBtn: { backgroundColor: '#6C63FF', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 8 },
-  aiBtnDisabled: { opacity: 0.5 },
-  aiBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  regenerateBtn: { alignItems: 'center', paddingVertical: 8 },
-  regenerateBtnText: { color: '#A7A9BE', fontSize: 13 },
-  errorText: { color: '#FF6B6B', fontSize: 13, textAlign: 'center' },
-  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  stepCheck: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: '#6C63FF',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepText: { color: '#FFFFFF', fontSize: 15, flex: 1 },
-  stepDuration: { color: '#A7A9BE', fontSize: 12 },
-  stepDone: { textDecorationLine: 'line-through', color: '#A7A9BE' },
-  noSteps: { backgroundColor: '#0F0E17', borderRadius: 12, padding: 16, marginTop: 4 },
-  noStepsText: { color: '#A7A9BE', fontSize: 14, lineHeight: 22, textAlign: 'center' },
-})

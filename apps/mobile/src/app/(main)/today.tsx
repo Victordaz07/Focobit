@@ -3,12 +3,91 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useTasksStore, useGamificationStore, useChallengesStore, useOfflineStore } from '../../stores'
+import { useAuthStore, useTasksStore, useGamificationStore, useChallengesStore, useOfflineStore, useThemeStore } from '../../stores'
 import { useChallenges } from '../../hooks'
 import { subscribeToTasks, completeTask, getGamificationProfile } from '@focobit/firebase-config'
-import { EnergyLevel } from '@focobit/shared'
+import { EnergyLevel, type AppTheme } from '@focobit/shared'
+
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bg },
+    scroll: { padding: 20, paddingTop: 56, paddingBottom: 40 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+    greeting: { fontSize: 22, fontWeight: '700', color: theme.text },
+    date: { fontSize: 13, color: theme.textMuted, marginTop: 2, textTransform: 'capitalize' },
+    levelBadge: { backgroundColor: theme.accentDim, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+    levelText: { color: theme.accent, fontWeight: '700', fontSize: 13 },
+    xpContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
+    xpBar: { flex: 1, height: 6, backgroundColor: theme.surface2, borderRadius: 3, overflow: 'hidden' },
+    xpFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 3 },
+    xpLabel: { color: theme.textMuted, fontSize: 12, width: 56 },
+    card: { backgroundColor: theme.surface, borderRadius: 16, padding: 16, marginBottom: 20 },
+    cardTitle: { color: theme.text, fontWeight: '600', marginBottom: 12, fontSize: 15 },
+    energyRow: { flexDirection: 'row', gap: 8 },
+    energyBtn: {
+      flex: 1, alignItems: 'center', padding: 10,
+      backgroundColor: theme.surface2, borderRadius: 12, borderWidth: 2, borderColor: 'transparent',
+    },
+    energyBtnActive: { borderColor: theme.accent, backgroundColor: theme.accentDim },
+    energyEmoji: { fontSize: 22 },
+    energyLabel: { color: theme.textMuted, fontSize: 11, marginTop: 4 },
+    section: { marginBottom: 20 },
+    sectionTitle: { color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+    taskCard: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: theme.surface, borderRadius: 12,
+      padding: 14, marginBottom: 8, gap: 12,
+    },
+    taskDone: { opacity: 0.5 },
+    taskCheck: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+    checkIcon: { color: theme.accent, fontSize: 14, fontWeight: '700' },
+    taskInfo: { flex: 1 },
+    taskTitle: { color: theme.text, fontSize: 15, fontWeight: '600' },
+    taskTitleDone: { textDecorationLine: 'line-through', color: theme.textMuted },
+    taskMeta: { color: theme.textMuted, fontSize: 12, marginTop: 3 },
+    streakCard: {
+      backgroundColor: theme.surface, borderRadius: 12,
+      padding: 14, marginBottom: 16,
+      borderLeftWidth: 3, borderLeftColor: theme.accent,
+    },
+    streakText: { color: theme.text, fontWeight: '700', fontSize: 15 },
+    streakSub: { color: theme.textMuted, fontSize: 12, marginTop: 2 },
+    crisisBtn: {
+      alignItems: 'center', padding: 16,
+      borderWidth: 1, borderColor: theme.surface2,
+      borderRadius: 12, marginTop: 8,
+    },
+    crisisBtnText: { color: theme.textMuted, fontSize: 15 },
+    crisisOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
+      alignItems: 'center', justifyContent: 'center', padding: 24,
+    },
+    crisisCard: {
+      backgroundColor: theme.surface, borderRadius: 20,
+      padding: 28, alignItems: 'center', width: '100%',
+    },
+    crisisWave: { fontSize: 48, marginBottom: 12 },
+    crisisTitle: { fontSize: 28, fontWeight: '800', color: theme.text, marginBottom: 8 },
+    crisisBody: { color: theme.textMuted, fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 20 },
+    crisisTask: {
+      backgroundColor: theme.bg, borderRadius: 12,
+      padding: 16, width: '100%', marginBottom: 20,
+    },
+    crisisTaskText: { color: theme.text, fontSize: 16, textAlign: 'center' },
+    crisisOk: { backgroundColor: theme.accent, borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
+    crisisOkText: { color: theme.text, fontWeight: '700', fontSize: 16 },
+    offlineBanner: { backgroundColor: '#FF9500', paddingHorizontal: 20, paddingVertical: 8 },
+    offlineBannerText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+    emptyState: { alignItems: 'center', padding: 32 },
+    emptyEmoji: { fontSize: 40, marginBottom: 12 },
+    emptyTitle: { color: theme.text, fontSize: 18, fontWeight: '700' },
+    emptyBody: { color: theme.textMuted, fontSize: 14, marginTop: 8, textAlign: 'center' },
+  })
+}
 
 export default function TodayScreen() {
+  const { theme } = useThemeStore()
+  const s = createStyles(theme)
   const { user, profile } = useAuthStore()
   const { tasks, currentEnergy, setTasks, setEnergy, getTodayTasks } = useTasksStore()
   const { isOnline, pendingCount, isSyncing } = useOfflineStore()
@@ -25,25 +104,19 @@ export default function TodayScreen() {
 
   useEffect(() => {
     if (!uid) { setLoading(false); return }
-
-    // Suscripción realtime a tareas
     const unsub = subscribeToTasks(uid, (newTasks) => {
       setTasks(newTasks)
       setLoading(false)
     })
-
-    // Cargar gamification
     getGamificationProfile(uid).then(gam => {
       if (gam) setGamProfile(gam)
     })
-
     return unsub
   }, [uid])
 
   async function handleCompleteTask(taskId: string) {
     if (!uid) return
     await completeTask(uid, taskId)
-    // El listener de subscribeToTasks actualiza automáticamente
   }
 
   const energyOptions: { value: EnergyLevel; label: string; emoji: string }[] = [
@@ -55,103 +128,75 @@ export default function TodayScreen() {
   const greetingName = profile?.displayName?.split(' ')[0] ?? 'Tú'
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       {(!isOnline || pendingCount > 0) && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineBannerText}>
-            {isSyncing
-              ? '🔄 Sincronizando...'
-              : !isOnline
-              ? '📵 Sin conexión — tus cambios se guardarán al volver'
-              : `⏳ ${pendingCount} cambio${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''}`}
+        <View style={s.offlineBanner}>
+          <Text style={s.offlineBannerText}>
+            {isSyncing ? '🔄 Sincronizando...' : !isOnline ? '📵 Sin conexión — tus cambios se guardarán al volver' : `⏳ ${pendingCount} cambio${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''}`}
           </Text>
         </View>
       )}
-      <ScrollView contentContainerStyle={styles.scroll}>
-
-        {/* Header */}
-        <View style={styles.header}>
+      <ScrollView contentContainerStyle={s.scroll}>
+        <View style={s.header}>
           <View>
-            <Text style={styles.greeting}>Hola, {greetingName} 👋</Text>
-            <Text style={styles.date}>
-              {new Date().toLocaleDateString('es', {
-                weekday: 'long', day: 'numeric', month: 'long'
-              })}
+            <Text style={s.greeting}>Hola, {greetingName} 👋</Text>
+            <Text style={s.date}>
+              {new Date().toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
             </Text>
           </View>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>⚡ Nv.{level}</Text>
+          <View style={s.levelBadge}>
+            <Text style={s.levelText}>⚡ Nv.{level}</Text>
           </View>
         </View>
 
-        {/* XP Bar */}
-        <View style={styles.xpContainer}>
-          <View style={styles.xpBar}>
-            <View style={[styles.xpFill, { width: `${xpPercent}%` }]} />
+        <View style={s.xpContainer}>
+          <View style={s.xpBar}>
+            <View style={[s.xpFill, { width: `${xpPercent}%` }]} />
           </View>
-          <Text style={styles.xpLabel}>{gamProfile?.xp ?? 0} XP</Text>
+          <Text style={s.xpLabel}>{gamProfile?.xp ?? 0} XP</Text>
         </View>
 
-        {/* Energy Check-in */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔋 ¿Cómo estás ahora?</Text>
-          <View style={styles.energyRow}>
+        <View style={s.card}>
+          <Text style={s.cardTitle}>🔋 ¿Cómo estás ahora?</Text>
+          <View style={s.energyRow}>
             {energyOptions.map(opt => (
               <TouchableOpacity
                 key={opt.value}
-                style={[
-                  styles.energyBtn,
-                  currentEnergy === opt.value && styles.energyBtnActive,
-                ]}
+                style={[s.energyBtn, currentEnergy === opt.value && s.energyBtnActive]}
                 onPress={() => setEnergy(opt.value)}
               >
-                <Text style={styles.energyEmoji}>{opt.emoji}</Text>
-                <Text style={styles.energyLabel}>{opt.label}</Text>
+                <Text style={s.energyEmoji}>{opt.emoji}</Text>
+                <Text style={s.energyLabel}>{opt.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Tareas de hoy */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            PARA HOY ({completedToday}/{todayTasks.length})
-          </Text>
-
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>PARA HOY ({completedToday}/{todayTasks.length})</Text>
           {loading ? (
-            <ActivityIndicator color="#6C63FF" style={{ marginTop: 24 }} />
+            <ActivityIndicator color={theme.accent} style={{ marginTop: 24 }} />
           ) : todayTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🎯</Text>
-              <Text style={styles.emptyTitle}>Sin tareas pendientes</Text>
-              <Text style={styles.emptyBody}>
-                Agrega algo desde la pestaña Tareas
-              </Text>
+            <View style={s.emptyState}>
+              <Text style={s.emptyEmoji}>🎯</Text>
+              <Text style={s.emptyTitle}>Sin tareas pendientes</Text>
+              <Text style={s.emptyBody}>Agrega algo desde la pestaña Tareas</Text>
             </View>
           ) : (
             todayTasks.map(task => (
               <TouchableOpacity
                 key={task.id}
-                style={[styles.taskCard, task.status === 'done' && styles.taskDone]}
+                style={[s.taskCard, task.status === 'done' && s.taskDone]}
                 onPress={() => handleCompleteTask(task.id)}
               >
-                <View style={styles.taskCheck}>
-                  <Text style={styles.checkIcon}>
-                    {task.status === 'done' ? '✓' : '○'}
-                  </Text>
+                <View style={s.taskCheck}>
+                  <Text style={s.checkIcon}>{task.status === 'done' ? '✓' : '○'}</Text>
                 </View>
-                <View style={styles.taskInfo}>
-                  <Text style={[
-                    styles.taskTitle,
-                    task.status === 'done' && styles.taskTitleDone,
-                  ]}>
-                    {task.title}
-                  </Text>
-                  <Text style={styles.taskMeta}>
-                    {task.energyRequired === 'low' ? '🔋 baja' :
-                      task.energyRequired === 'medium' ? '🔋🔋 media' : '🔋🔋🔋 alta'}
-                    {task.microSteps.length > 0 &&
-                      `  ·  ${task.microSteps.filter(s => s.done).length}/${task.microSteps.length} pasos`}
+                <View style={s.taskInfo}>
+                  <Text style={[s.taskTitle, task.status === 'done' && s.taskTitleDone]}>{task.title}</Text>
+                  <Text style={s.taskMeta}>
+                    {task.energyRequired === 'low' ? '🔋 baja' : task.energyRequired === 'medium' ? '🔋🔋 media' : '🔋🔋🔋 alta'}
+                    {task.microSteps.length > 0 && `  ·  ${task.microSteps.filter(st => st.done).length}/${task.microSteps.length} pasos`}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -159,71 +204,51 @@ export default function TodayScreen() {
           )}
         </View>
 
-        {/* Racha */}
         {gamProfile && (
-          <View style={styles.streakCard}>
-            <Text style={styles.streakText}>
-              🔥 Racha: {gamProfile.streakDays} días
-            </Text>
-            <Text style={styles.streakSub}>
-              {gamProfile.streakState === 'paused'
-                ? '¡Vuelve pronto para recuperarla!'
-                : '¡Sigue así!'}
+          <View style={s.streakCard}>
+            <Text style={s.streakText}>🔥 Racha: {gamProfile.streakDays} días</Text>
+            <Text style={s.streakSub}>
+              {gamProfile.streakState === 'paused' ? '¡Vuelve pronto para recuperarla!' : '¡Sigue así!'}
             </Text>
           </View>
         )}
 
-        {/* Botón crisis */}
-        <TouchableOpacity
-          style={styles.crisisBtn}
-          onPress={() => setCrisisMode(true)}
-        >
-          <Text style={styles.crisisBtnText}>😵 Estoy saturado</Text>
+        <TouchableOpacity style={s.crisisBtn} onPress={() => setCrisisMode(true)}>
+          <Text style={s.crisisBtnText}>😵 Estoy saturado</Text>
         </TouchableOpacity>
-
       </ScrollView>
 
-      {/* Modal nuevo logro */}
       <Modal visible={!!latestAchievement} transparent animationType="fade">
-        <View style={styles.crisisOverlay}>
-          <View style={styles.crisisCard}>
-            <Text style={{ fontSize: 56, marginBottom: 8 }}>
-              {latestAchievement?.emoji ?? '🏆'}
-            </Text>
-            <Text style={styles.crisisTitle}>¡Logro desbloqueado!</Text>
-            <Text style={[styles.crisisBody, { fontSize: 18, color: '#6C63FF', fontWeight: '700' }]}>
-              {latestAchievement?.title}
-            </Text>
-            <Text style={styles.crisisBody}>{latestAchievement?.description}</Text>
-            <TouchableOpacity style={styles.crisisOk} onPress={clearNewAchievements}>
-              <Text style={styles.crisisOkText}>¡Genial! 🎉</Text>
+        <View style={s.crisisOverlay}>
+          <View style={s.crisisCard}>
+            <Text style={{ fontSize: 56, marginBottom: 8 }}>{latestAchievement?.emoji ?? '🏆'}</Text>
+            <Text style={s.crisisTitle}>¡Logro desbloqueado!</Text>
+            <Text style={[s.crisisBody, { fontSize: 18, color: theme.accent, fontWeight: '700' }]}>{latestAchievement?.title}</Text>
+            <Text style={s.crisisBody}>{latestAchievement?.description}</Text>
+            <TouchableOpacity style={s.crisisOk} onPress={clearNewAchievements}>
+              <Text style={s.crisisOkText}>¡Genial! 🎉</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Modal Crisis */}
       <Modal visible={crisisMode} transparent animationType="fade">
-        <View style={styles.crisisOverlay}>
-          <View style={styles.crisisCard}>
-            <Text style={styles.crisisWave}>🌊</Text>
-            <Text style={styles.crisisTitle}>Respira.</Text>
-            <Text style={styles.crisisBody}>
-              No tienes que hacer todo ahora.{'\n'}
-              Solo necesitas hacer UNA cosa.
+        <View style={s.crisisOverlay}>
+          <View style={s.crisisCard}>
+            <Text style={s.crisisWave}>🌊</Text>
+            <Text style={s.crisisTitle}>Respira.</Text>
+            <Text style={s.crisisBody}>
+              No tienes que hacer todo ahora.{'\n'}Solo necesitas hacer UNA cosa.
             </Text>
-            <View style={styles.crisisTask}>
-              <Text style={styles.crisisTaskText}>
+            <View style={s.crisisTask}>
+              <Text style={s.crisisTaskText}>
                 {todayTasks.find(t => t.energyRequired === 'low' && t.status === 'pending')
                   ? `💧 ${todayTasks.find(t => t.energyRequired === 'low' && t.status === 'pending')!.title}`
                   : '💧 Tomar un vaso de agua'}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.crisisOk}
-              onPress={() => setCrisisMode(false)}
-            >
-              <Text style={styles.crisisOkText}>✓ Entendido</Text>
+            <TouchableOpacity style={s.crisisOk} onPress={() => setCrisisMode(false)}>
+              <Text style={s.crisisOkText}>✓ Entendido</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -231,87 +256,3 @@ export default function TodayScreen() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  scroll: { padding: 20, paddingTop: 56, paddingBottom: 40 },
-
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  greeting: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
-  date: { fontSize: 13, color: '#A7A9BE', marginTop: 2, textTransform: 'capitalize' },
-  levelBadge: { backgroundColor: '#1E1B3A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  levelText: { color: '#6C63FF', fontWeight: '700', fontSize: 13 },
-
-  xpContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 },
-  xpBar: { flex: 1, height: 6, backgroundColor: '#2A2A40', borderRadius: 3, overflow: 'hidden' },
-  xpFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 3 },
-  xpLabel: { color: '#A7A9BE', fontSize: 12, width: 56 },
-
-  card: { backgroundColor: '#1A1A2E', borderRadius: 16, padding: 16, marginBottom: 20 },
-  cardTitle: { color: '#FFFFFF', fontWeight: '600', marginBottom: 12, fontSize: 15 },
-  energyRow: { flexDirection: 'row', gap: 8 },
-  energyBtn: {
-    flex: 1, alignItems: 'center', padding: 10,
-    backgroundColor: '#2A2A40', borderRadius: 12, borderWidth: 2, borderColor: 'transparent',
-  },
-  energyBtnActive: { borderColor: '#6C63FF', backgroundColor: '#1E1B3A' },
-  energyEmoji: { fontSize: 22 },
-  energyLabel: { color: '#A7A9BE', fontSize: 11, marginTop: 4 },
-
-  section: { marginBottom: 20 },
-  sectionTitle: { color: '#A7A9BE', fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
-
-  taskCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1A1A2E', borderRadius: 12,
-    padding: 14, marginBottom: 8, gap: 12,
-  },
-  taskDone: { opacity: 0.5 },
-  taskCheck: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: '#6C63FF', alignItems: 'center', justifyContent: 'center' },
-  checkIcon: { color: '#6C63FF', fontSize: 14, fontWeight: '700' },
-  taskInfo: { flex: 1 },
-  taskTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
-  taskTitleDone: { textDecorationLine: 'line-through', color: '#A7A9BE' },
-  taskMeta: { color: '#A7A9BE', fontSize: 12, marginTop: 3 },
-
-  streakCard: {
-    backgroundColor: '#1A1A2E', borderRadius: 12,
-    padding: 14, marginBottom: 16,
-    borderLeftWidth: 3, borderLeftColor: '#FF9500',
-  },
-  streakText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  streakSub: { color: '#A7A9BE', fontSize: 12, marginTop: 2 },
-
-  crisisBtn: {
-    alignItems: 'center', padding: 16,
-    borderWidth: 1, borderColor: '#2A2A40',
-    borderRadius: 12, marginTop: 8,
-  },
-  crisisBtnText: { color: '#A7A9BE', fontSize: 15 },
-
-  crisisOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center', justifyContent: 'center', padding: 24,
-  },
-  crisisCard: {
-    backgroundColor: '#1A1A2E', borderRadius: 20,
-    padding: 28, alignItems: 'center', width: '100%',
-  },
-  crisisWave: { fontSize: 48, marginBottom: 12 },
-  crisisTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', marginBottom: 8 },
-  crisisBody: { color: '#A7A9BE', fontSize: 16, textAlign: 'center', lineHeight: 24, marginBottom: 20 },
-  crisisTask: {
-    backgroundColor: '#0F0E17', borderRadius: 12,
-    padding: 16, width: '100%', marginBottom: 20,
-  },
-  crisisTaskText: { color: '#FFFFFF', fontSize: 16, textAlign: 'center' },
-  crisisOk: { backgroundColor: '#6C63FF', borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
-  crisisOkText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-
-  offlineBanner: { backgroundColor: '#FF9500', paddingHorizontal: 20, paddingVertical: 8 },
-  offlineBannerText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  emptyState: { alignItems: 'center', padding: 32 },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
-  emptyBody: { color: '#A7A9BE', fontSize: 14, marginTop: 8, textAlign: 'center' },
-})

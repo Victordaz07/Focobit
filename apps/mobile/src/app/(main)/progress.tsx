@@ -3,10 +3,10 @@ import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useGamificationStore, useTasksStore, useChallengesStore } from '../../stores'
+import { useAuthStore, useGamificationStore, useTasksStore, useChallengesStore, useThemeStore } from '../../stores'
 import { useChallenges } from '../../hooks'
 import { getGamificationProfile, getFirestoreDb, doc, getDoc, getUnlockedAchievements, ACHIEVEMENTS_CATALOG } from '@focobit/firebase-config'
-import { Skills, SkillName } from '@focobit/shared'
+import { Skills, SkillName, type AppTheme } from '@focobit/shared'
 import { SKILL_PERKS, getLevelTitle, xpToNextLevel } from '@focobit/shared'
 
 const SKILL_LABELS: Record<SkillName, { label: string; emoji: string; color: string }> = {
@@ -16,7 +16,70 @@ const SKILL_LABELS: Record<SkillName, { label: string; emoji: string; color: str
   energy:      { label: 'Energía',     emoji: '⚡', color: '#FFD60A' },
 }
 
+function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.bg },
+    scroll: { padding: 20, paddingTop: 56, paddingBottom: 48 },
+    centered: { flex: 1, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' },
+    profileCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 16, padding: 16, marginBottom: 12, gap: 12 },
+    avatarCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+    avatarText: { color: theme.text, fontSize: 22, fontWeight: '800' },
+    profileInfo: { flex: 1 },
+    profileName: { color: theme.text, fontSize: 17, fontWeight: '700' },
+    profileTitle: { color: theme.textMuted, fontSize: 13, marginTop: 2 },
+    levelBadge: { alignItems: 'center', backgroundColor: theme.accentDim, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 2, borderColor: theme.accent },
+    levelNum: { color: theme.accent, fontSize: 22, fontWeight: '800' },
+    levelLbl: { color: theme.textMuted, fontSize: 11 },
+    xpCard: { backgroundColor: theme.surface, borderRadius: 16, padding: 16, marginBottom: 12 },
+    xpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    xpLabel: { color: theme.text, fontWeight: '600', fontSize: 14 },
+    xpToNext: { color: theme.textMuted, fontSize: 13 },
+    xpBar: { height: 10, backgroundColor: theme.surface2, borderRadius: 5, overflow: 'hidden' },
+    xpFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 5 },
+    statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+    statCard: { flex: 1, backgroundColor: theme.surface, borderRadius: 14, padding: 12, alignItems: 'center' },
+    statEmoji: { fontSize: 20, marginBottom: 4 },
+    statValue: { fontSize: 20, fontWeight: '800', color: theme.text },
+    statLabel: { color: theme.textMuted, fontSize: 11, marginTop: 2 },
+    streakBanner: { backgroundColor: theme.surface, borderRadius: 14, padding: 14, marginBottom: 20, borderLeftWidth: 4 },
+    streakBannerTitle: { color: theme.text, fontWeight: '700', fontSize: 15, marginBottom: 4 },
+    streakBannerSub: { color: theme.textMuted, fontSize: 13, lineHeight: 20 },
+    sectionTitle: { color: theme.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+    skillCard: { backgroundColor: theme.surface, borderRadius: 14, padding: 14, marginBottom: 8 },
+    skillHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+    skillEmoji: { fontSize: 24 },
+    skillInfo: { flex: 1 },
+    skillLabel: { color: theme.text, fontWeight: '700', fontSize: 15 },
+    skillPerk: { color: theme.textMuted, fontSize: 12, marginTop: 2 },
+    skillLevelBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+    skillLevelText: { fontWeight: '800', fontSize: 13 },
+    skillBar: { height: 6, backgroundColor: theme.surface2, borderRadius: 3, overflow: 'hidden', marginBottom: 4 },
+    skillFill: { height: '100%', borderRadius: 3 },
+    skillXP: { color: theme.textMuted, fontSize: 11, textAlign: 'right' },
+    achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+    challengeCard: { backgroundColor: theme.surface, borderRadius: 14, padding: 14, marginBottom: 10 },
+    challengeComplete: { borderWidth: 1, borderColor: theme.accent },
+    challengeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    challengeTitle: { color: theme.text, fontWeight: '600', fontSize: 14, flex: 1 },
+    challengeDone: { color: theme.accent, fontSize: 18, fontWeight: '800', marginLeft: 8 },
+    challengeBar: { height: 6, backgroundColor: theme.surface2, borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
+    challengeFill: { height: '100%', backgroundColor: theme.accent, borderRadius: 3 },
+    challengeBottom: { flexDirection: 'row', justifyContent: 'space-between' },
+    challengeProgress: { color: theme.textMuted, fontSize: 12 },
+    challengeReward: { color: theme.accent, fontSize: 12, fontWeight: '600' },
+    emptyCard: { backgroundColor: theme.surface, borderRadius: 14, padding: 20, alignItems: 'center' },
+    emptyCardText: { color: theme.textMuted, fontSize: 14 },
+    achievementDesc: { color: theme.textMuted, fontSize: 10, textAlign: 'center', marginTop: 2 },
+    achievementCard: { width: '30%', backgroundColor: theme.surface, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
+    achievementLocked: { opacity: 0.4 },
+    achievementEmoji: { fontSize: 28 },
+    achievementTitle: { color: theme.text, fontSize: 11, textAlign: 'center', fontWeight: '600' },
+  })
+}
+
 export default function ProgressScreen() {
+  const { theme } = useThemeStore()
+  const styles = createStyles(theme)
   const { user } = useAuthStore()
   const { profile: gamProfile, setProfile, level, xpPercent } = useGamificationStore()
   const { tasks } = useTasksStore()
@@ -46,14 +109,14 @@ export default function ProgressScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color="#6C63FF" size="large" />
+        <ActivityIndicator color={theme.accent} size="large" />
       </View>
     )
   }
 
   const levelTitle = getLevelTitle(level)
   const xpToNext = gamProfile ? xpToNextLevel(gamProfile.xp) : 300
-  const streakColor = gamProfile?.streakState === 'paused' ? '#FF9500' : '#6C63FF'
+  const streakColor = gamProfile?.streakState === 'paused' ? '#FF9500' : theme.accent
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
@@ -94,22 +157,26 @@ export default function ProgressScreen() {
           emoji="✅"
           value={gamProfile?.totalTasksCompleted ?? 0}
           label="Tareas"
+          styles={styles}
         />
         <StatCard
           emoji="⏱"
           value={gamProfile?.totalFocusSessions ?? 0}
           label="Focus"
+          styles={styles}
         />
         <StatCard
           emoji="🔥"
           value={gamProfile?.streakDays ?? 0}
           label="Racha"
           color={streakColor}
+          styles={styles}
         />
         <StatCard
           emoji="🪙"
           value={gamProfile?.coins ?? 0}
           label="Monedas"
+          styles={styles}
         />
       </View>
 
@@ -224,13 +291,13 @@ export default function ProgressScreen() {
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
-function StatCard({ emoji, value, label, color = '#FFFFFF' }: {
-  emoji: string; value: number; label: string; color?: string
+function StatCard({ emoji, value, label, color, styles }: {
+  emoji: string; value: number; label: string; color?: string; styles: ReturnType<typeof createStyles>
 }) {
   return (
     <View style={styles.statCard}>
       <Text style={styles.statEmoji}>{emoji}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
+      <Text style={[styles.statValue, color ? { color } : undefined]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   )
@@ -242,69 +309,3 @@ function formatPerk(perk: string): string {
   return perk.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0E17' },
-  scroll: { padding: 20, paddingTop: 56, paddingBottom: 48 },
-  centered: { flex: 1, backgroundColor: '#0F0E17', alignItems: 'center', justifyContent: 'center' },
-
-  profileCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A1A2E', borderRadius: 16, padding: 16, marginBottom: 12, gap: 12 },
-  avatarCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#6C63FF', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  profileInfo: { flex: 1 },
-  profileName: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
-  profileTitle: { color: '#A7A9BE', fontSize: 13, marginTop: 2 },
-  levelBadge: { alignItems: 'center', backgroundColor: '#1E1B3A', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 2, borderColor: '#6C63FF' },
-  levelNum: { color: '#6C63FF', fontSize: 22, fontWeight: '800' },
-  levelLbl: { color: '#A7A9BE', fontSize: 11 },
-
-  xpCard: { backgroundColor: '#1A1A2E', borderRadius: 16, padding: 16, marginBottom: 12 },
-  xpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  xpLabel: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
-  xpToNext: { color: '#A7A9BE', fontSize: 13 },
-  xpBar: { height: 10, backgroundColor: '#2A2A40', borderRadius: 5, overflow: 'hidden' },
-  xpFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 5 },
-
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  statCard: { flex: 1, backgroundColor: '#1A1A2E', borderRadius: 14, padding: 12, alignItems: 'center' },
-  statEmoji: { fontSize: 20, marginBottom: 4 },
-  statValue: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
-  statLabel: { color: '#A7A9BE', fontSize: 11, marginTop: 2 },
-
-  streakBanner: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, marginBottom: 20, borderLeftWidth: 4 },
-  streakBannerTitle: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, marginBottom: 4 },
-  streakBannerSub: { color: '#A7A9BE', fontSize: 13, lineHeight: 20 },
-
-  sectionTitle: { color: '#A7A9BE', fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
-
-  skillCard: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, marginBottom: 8 },
-  skillHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  skillEmoji: { fontSize: 24 },
-  skillInfo: { flex: 1 },
-  skillLabel: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  skillPerk: { color: '#A7A9BE', fontSize: 12, marginTop: 2 },
-  skillLevelBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  skillLevelText: { fontWeight: '800', fontSize: 13 },
-  skillBar: { height: 6, backgroundColor: '#2A2A40', borderRadius: 3, overflow: 'hidden', marginBottom: 4 },
-  skillFill: { height: '100%', borderRadius: 3 },
-  skillXP: { color: '#A7A9BE', fontSize: 11, textAlign: 'right' },
-
-  achievementsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  challengeCard: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, marginBottom: 10 },
-  challengeComplete: { borderWidth: 1, borderColor: '#6C63FF' },
-  challengeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  challengeTitle: { color: '#FFFFFF', fontWeight: '600', fontSize: 14, flex: 1 },
-  challengeDone: { color: '#6C63FF', fontSize: 18, fontWeight: '800', marginLeft: 8 },
-  challengeBar: { height: 6, backgroundColor: '#2A2A40', borderRadius: 3, overflow: 'hidden', marginBottom: 6 },
-  challengeFill: { height: '100%', backgroundColor: '#6C63FF', borderRadius: 3 },
-  challengeBottom: { flexDirection: 'row', justifyContent: 'space-between' },
-  challengeProgress: { color: '#A7A9BE', fontSize: 12 },
-  challengeReward: { color: '#6C63FF', fontSize: 12, fontWeight: '600' },
-  emptyCard: { backgroundColor: '#1A1A2E', borderRadius: 14, padding: 20, alignItems: 'center' },
-  emptyCardText: { color: '#A7A9BE', fontSize: 14 },
-  achievementDesc: { color: '#A7A9BE', fontSize: 10, textAlign: 'center', marginTop: 2 },
-  achievementCard: { width: '30%', backgroundColor: '#1A1A2E', borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
-  achievementLocked: { opacity: 0.4 },
-  achievementEmoji: { fontSize: 28 },
-  achievementTitle: { color: '#FFFFFF', fontSize: 11, textAlign: 'center', fontWeight: '600' },
-})
