@@ -1,0 +1,11 @@
+{
+  "name": "focobit-alexa-skill",
+  "version": "1.0.0",
+  "description": "Alexa Skill para Focobit",
+  "main": "index.js",
+  "dependencies": {
+    "ask-sdk-core": "^2.14.0",
+    "ask-sdk-model": "^1.89.0",
+    "firebase-admin": "^12.0.0"
+  }
+}

@@ -44,6 +44,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-notifications',
+    'expo-quick-actions',
     '@react-native-firebase/app',
     [
       'expo-build-properties',
@@ -59,7 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   ],
   extra: {
-    eas: { projectId: 'YOUR_EAS_PROJECT_ID' },
+    eas: { projectId: '4f3ae376-aae8-4674-ae62-bb4582e56bea' },
   },
-  owner: 'victordaz07',
+  owner: 'victordaz007',
 })

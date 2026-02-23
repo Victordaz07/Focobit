@@ -62,6 +62,14 @@ export default function MainLayout() {
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🛒</Text>,
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Ajustes',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚙️</Text>,
+        }}
+      />
     </Tabs>
   )
 }

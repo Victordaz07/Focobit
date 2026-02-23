@@ -1,0 +1,59 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "focobit",
+      "intents": [
+        {
+          "name": "GetTodayTasksIntent",
+          "slots": [],
+          "samples": [
+            "cuántas tareas tengo",
+            "qué tareas tengo hoy",
+            "muéstrame mis tareas",
+            "mis tareas pendientes",
+            "qué tengo pendiente"
+          ]
+        },
+        {
+          "name": "AddTaskIntent",
+          "slots": [
+            {
+              "name": "taskName",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "agregar tarea {taskName}",
+            "añadir {taskName} a mis tareas",
+            "nueva tarea {taskName}",
+            "crear tarea {taskName}",
+            "agrega {taskName}"
+          ]
+        },
+        {
+          "name": "GetStreakIntent",
+          "slots": [],
+          "samples": [
+            "cuál es mi racha",
+            "cuántos días llevo",
+            "mi racha actual",
+            "cómo va mi racha",
+            "días consecutivos"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        }
+      ]
+    }
+  }
+}
