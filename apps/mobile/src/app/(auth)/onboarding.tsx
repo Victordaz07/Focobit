@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator
 import { router } from 'expo-router'
 import { useOnboardingStore, useAuthStore } from '../../stores'
 import { createUserProfile } from '@focobit/firebase-config'
+import { trackEvent, setAnalyticsUser } from '../../hooks/useAnalytics'
 import type { EnergyProfile, ReminderStyle, OnboardingGoal } from '@focobit/shared'
 
 const GOALS = [
@@ -33,6 +34,12 @@ export default function OnboardingScreen() {
         energyProfile: energy,
         reminderStyle,
         goals,
+      })
+      await setAnalyticsUser(user.uid)
+      await trackEvent('onboarding_completed', {
+        energy_profile: energy,
+        reminder_style: reminderStyle,
+        goals_count: goals.length,
       })
       router.replace('/(main)/today')
     } catch (e) {

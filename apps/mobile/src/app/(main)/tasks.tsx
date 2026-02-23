@@ -9,6 +9,8 @@ import {
   generateMicroStepsForTask, updateTaskMicroSteps, toggleMicroStep,
 } from '@focobit/firebase-config'
 import { Task, EnergyLevel, TaskPriority, CreateTaskInput, addPendingOp, getPendingOps } from '@focobit/shared'
+import { trackEvent } from '../../hooks/useAnalytics'
+import { startTrace } from '../../hooks/usePerformance'
 
 type FilterTab = 'all' | 'urgent' | 'someday'
 
@@ -38,7 +40,8 @@ export default function TasksScreen() {
     return true
   })
 
-  async function handleComplete(taskId: string) {
+  async function handleComplete(task: Task) {
+    const taskId = task.id
     // Optimistic update inmediato
     const { setTasks: setStoreTasks, tasks: storeTasks } = useTasksStore.getState()
     setStoreTasks(storeTasks.map(t => t.id === taskId ? { ...t, status: 'done' } as Task : t))
@@ -51,6 +54,11 @@ export default function TasksScreen() {
 
     try {
       await completeTask(uid, taskId)
+      await trackEvent('task_completed', {
+        had_micro_steps: (task.microSteps?.length ?? 0) > 0,
+        energy_required: task.energyRequired,
+        priority: task.priority,
+      })
     } catch {
       // Revertir si falla
       const { tasks: currentTasks, setTasks: setStoreTasks2 } = useTasksStore.getState()
@@ -101,12 +109,12 @@ export default function TasksScreen() {
                 key={task.id}
                 style={[styles.taskCard, task.status === 'done' && styles.taskDone]}
                 onPress={() => setShowDetail(task)}
-                onLongPress={() => handleComplete(task.id)}
+                onLongPress={() => handleComplete(task)}
               >
                 <View style={styles.taskLeft}>
                   <TouchableOpacity
                     style={styles.checkCircle}
-                    onPress={() => handleComplete(task.id)}
+                    onPress={() => handleComplete(task)}
                   >
                     <Text style={styles.checkIcon}>
                       {task.status === 'done' ? '✓' : ''}
@@ -145,7 +153,7 @@ export default function TasksScreen() {
           task={showDetail}
           uid={uid}
           onClose={() => setShowDetail(null)}
-          onComplete={() => { handleComplete(showDetail.id); setShowDetail(null) }}
+          onComplete={() => { handleComplete(showDetail); setShowDetail(null) }}
         />
       )}
     </View>
@@ -255,16 +263,22 @@ function TaskDetailModal({
   }, [storeTasks, task.id])
 
   async function handleGenerateSteps() {
+    const trace = await startTrace('generate_micro_steps')
     setGenerating(true)
     setError('')
     try {
       const newSteps = await generateMicroStepsForTask(task.title, currentEnergy)
       await updateTaskMicroSteps(uid, task.id, newSteps)
       setSteps(newSteps)
+      await trackEvent('micro_steps_generated', {
+        energy_level: currentEnergy,
+        step_count: newSteps.length,
+      })
     } catch (e) {
       setError('No se pudieron generar los pasos. Intenta de nuevo.')
       console.error(e)
     } finally {
+      await trace?.stop()
       setGenerating(false)
     }
   }

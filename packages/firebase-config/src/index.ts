@@ -38,3 +38,11 @@ export {
 export type { Achievement } from './achievementsService'
 export { generateMicroStepsForTask } from './aiService'
 export type { AIMicroStep } from './aiService'
+export {
+  trackTaskCreated, trackTaskCompleted, trackMicroStepsGenerated,
+  trackFocusStarted, trackFocusCompleted, trackFocusAbandoned,
+  trackLevelUp, trackAchievementUnlocked, trackStreakUpdated,
+  trackCrisisMode, trackRoutineCreated, trackRoutineCompleted,
+  trackOnboardingStep, trackOnboardingCompleted,
+  setAnalyticsUser, trackScreen,
+} from './analytics'

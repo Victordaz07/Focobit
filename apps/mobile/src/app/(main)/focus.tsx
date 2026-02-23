@@ -8,6 +8,7 @@ import {
   abandonFocusSession, awardXPForAction, updateStreak,
 } from '@focobit/firebase-config'
 import { FocusDuration } from '@focobit/shared'
+import { trackEvent } from '../../hooks/useAnalytics'
 
 const DURATIONS: FocusDuration[] = [5, 10, 15, 20, 25]
 
@@ -46,6 +47,10 @@ export default function FocusScreen() {
 
   async function handleStart() {
     if (!uid) return
+    await trackEvent('focus_started', {
+      duration_min: focus.duration,
+      has_linked_task: !!focus.linkedTaskId,
+    })
     const sessionId = await startFocusSession(uid, {
       durationMin: focus.duration,
       linkedTaskId: focus.linkedTaskId ?? undefined,
@@ -66,6 +71,10 @@ export default function FocusScreen() {
     if (!uid || !focus.sessionId) return
     await abandonFocusSession(uid, focus.sessionId)
     focus.abandon()
+    await trackEvent('focus_abandoned', {
+      duration_min: focus.duration,
+      seconds_elapsed: Math.floor((focus.duration * 60) - focus.secondsLeft),
+    })
     focus.reset()
     completedRef.current = false
   }

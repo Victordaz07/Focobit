@@ -43,6 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-notifications',
+    '@react-native-firebase/app',
     [
       'expo-build-properties',
       {
