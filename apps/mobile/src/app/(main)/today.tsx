@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, Modal, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useTasksStore, useGamificationStore, useChallengesStore } from '../../stores'
+import { useAuthStore, useTasksStore, useGamificationStore, useChallengesStore, useOfflineStore } from '../../stores'
 import { useChallenges } from '../../hooks'
 import { subscribeToTasks, completeTask, getGamificationProfile } from '@focobit/firebase-config'
 import { EnergyLevel } from '@focobit/shared'
@@ -11,6 +11,7 @@ import { EnergyLevel } from '@focobit/shared'
 export default function TodayScreen() {
   const { user, profile } = useAuthStore()
   const { tasks, currentEnergy, setTasks, setEnergy, getTodayTasks } = useTasksStore()
+  const { isOnline, pendingCount, isSyncing } = useOfflineStore()
   const { profile: gamProfile, setProfile: setGamProfile, level, xpPercent } = useGamificationStore()
   const [crisisMode, setCrisisMode] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -55,6 +56,17 @@ export default function TodayScreen() {
 
   return (
     <View style={styles.container}>
+      {(!isOnline || pendingCount > 0) && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            {isSyncing
+              ? '🔄 Sincronizando...'
+              : !isOnline
+              ? '📵 Sin conexión — tus cambios se guardarán al volver'
+              : `⏳ ${pendingCount} cambio${pendingCount > 1 ? 's' : ''} pendiente${pendingCount > 1 ? 's' : ''}`}
+          </Text>
+        </View>
+      )}
       <ScrollView contentContainerStyle={styles.scroll}>
 
         {/* Header */}
@@ -296,6 +308,8 @@ const styles = StyleSheet.create({
   crisisOk: { backgroundColor: '#6C63FF', borderRadius: 12, padding: 14, width: '100%', alignItems: 'center' },
   crisisOkText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
 
+  offlineBanner: { backgroundColor: '#FF9500', paddingHorizontal: 20, paddingVertical: 8 },
+  offlineBannerText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600', textAlign: 'center' },
   emptyState: { alignItems: 'center', padding: 32 },
   emptyEmoji: { fontSize: 40, marginBottom: 12 },
   emptyTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },

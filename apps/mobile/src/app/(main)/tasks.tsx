@@ -3,18 +3,19 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   TextInput, Modal, ActivityIndicator,
 } from 'react-native'
-import { useAuthStore, useTasksStore } from '../../stores'
+import { useAuthStore, useTasksStore, useOfflineStore } from '../../stores'
 import {
   subscribeToTasks, createTask, completeTask,
   generateMicroStepsForTask, updateTaskMicroSteps, toggleMicroStep,
 } from '@focobit/firebase-config'
-import { Task, EnergyLevel, TaskPriority, CreateTaskInput } from '@focobit/shared'
+import { Task, EnergyLevel, TaskPriority, CreateTaskInput, addPendingOp, getPendingOps } from '@focobit/shared'
 
 type FilterTab = 'all' | 'urgent' | 'someday'
 
 export default function TasksScreen() {
   const { user } = useAuthStore()
   const { tasks, setTasks } = useTasksStore()
+  const { isOnline, setPendingCount } = useOfflineStore()
   const [filter, setFilter] = useState<FilterTab>('all')
   const [showAdd, setShowAdd] = useState(false)
   const [showDetail, setShowDetail] = useState<Task | null>(null)
@@ -38,7 +39,27 @@ export default function TasksScreen() {
   })
 
   async function handleComplete(taskId: string) {
-    await completeTask(uid, taskId)
+    // Optimistic update inmediato
+    const { setTasks: setStoreTasks, tasks: storeTasks } = useTasksStore.getState()
+    setStoreTasks(storeTasks.map(t => t.id === taskId ? { ...t, status: 'done' } as Task : t))
+
+    if (!isOnline) {
+      addPendingOp({ type: 'complete_task', payload: { taskId } })
+      setPendingCount(getPendingOps().length)
+      return
+    }
+
+    try {
+      await completeTask(uid, taskId)
+    } catch {
+      // Revertir si falla
+      const { tasks: currentTasks, setTasks: setStoreTasks2 } = useTasksStore.getState()
+      setStoreTasks2(currentTasks.map(t =>
+        t.id === taskId ? { ...t, status: 'pending' } as Task : t
+      ))
+      addPendingOp({ type: 'complete_task', payload: { taskId } })
+      setPendingCount(getPendingOps().length)
+    }
   }
 
   return (

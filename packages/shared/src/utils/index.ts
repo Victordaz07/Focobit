@@ -1,3 +1,5 @@
 export * from './gamification.utils'
 export * from './streak.utils'
 export * from './energy.utils'
+export { getPendingOps, addPendingOp, removePendingOp, clearPendingOps } from './offline'
+export type { PendingOperation } from './offline'
