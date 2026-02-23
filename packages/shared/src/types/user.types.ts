@@ -1,4 +1,4 @@
-export type EnergyProfile = 'morning' | 'evening' | 'variable'
+export type EnergyProfile = 'morning' | 'afternoon' | 'evening' | 'variable'
 export type ReminderStyle = 'gentle' | 'direct' | 'minimal'
 export type OnboardingGoal =
   | 'start_tasks'
@@ -6,6 +6,11 @@ export type OnboardingGoal =
   | 'focus_more'
   | 'remember_things'
   | 'manage_stress'
+  | 'work'
+  | 'health'
+  | 'home'
+  | 'creative'
+  | 'social'
 
 export interface UserProfile {
   uid: string

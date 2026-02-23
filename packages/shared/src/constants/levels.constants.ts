@@ -9,18 +9,26 @@ export const LEVEL_UNLOCKS: Record<number, string> = {
 }
 
 export const LEVEL_TITLES: Record<number, string> = {
-  1: 'Aprendiz',
-  3: 'Explorador',
+  1: 'Explorador',
+  2: 'Aprendiz',
+  3: 'Activador',
+  4: 'Enfocado',
   5: 'Constante',
-  8: 'Enfocado',
-  12: 'Maestro',
-  20: 'Leyenda',
+  6: 'Flujo',
+  7: 'Maestro del Foco',
+  8: 'Arquitecto',
+  9: 'Leyenda TDAH',
+  10: 'Modo Dios 🔥',
 }
 
 export function getLevelTitle(level: number): string {
-  const keys = Object.keys(LEVEL_TITLES).map(Number).sort((a, b) => b - a)
-  for (const key of keys) {
-    if (level >= key) return LEVEL_TITLES[key]
-  }
-  return 'Aprendiz'
+  return LEVEL_TITLES[Math.min(level, 10)] ?? `Nivel ${level}`
+}
+
+export function getLevelColor(level: number): string {
+  if (level <= 2) return '#A7A9BE'
+  if (level <= 4) return '#4ECDC4'
+  if (level <= 6) return '#6C63FF'
+  if (level <= 8) return '#FF9500'
+  return '#FFD60A'
 }

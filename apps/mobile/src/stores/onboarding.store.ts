@@ -1,48 +1,40 @@
 import { create } from 'zustand'
-import { OnboardingData, EnergyProfile, ReminderStyle, OnboardingGoal } from '@focobit/shared'
+import type { EnergyProfile, ReminderStyle, OnboardingGoal } from '@focobit/shared'
 
 interface OnboardingState {
   step: number
-  data: Partial<OnboardingData>
+  energy: EnergyProfile
+  reminderStyle: ReminderStyle
+  goals: OnboardingGoal[]
   setStep: (step: number) => void
-  nextStep: () => void
-  prevStep: () => void
-  setEnergyProfile: (energy: EnergyProfile) => void
+  setEnergy: (energy: EnergyProfile) => void
   setReminderStyle: (style: ReminderStyle) => void
   toggleGoal: (goal: OnboardingGoal) => void
-  setAge: (age: number) => void
+  setData: (data: Partial<{ energy: EnergyProfile; reminderStyle: ReminderStyle; goals: OnboardingGoal[] }>) => void
   reset: () => void
 }
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
-  step: 1,
-  data: {
-    goals: [],
-  },
+  step: 0,
+  energy: 'variable',
+  reminderStyle: 'gentle',
+  goals: [],
 
   setStep: (step) => set({ step }),
-  nextStep: () => set((state) => ({ step: state.step + 1 })),
-  prevStep: () => set((state) => ({ step: Math.max(1, state.step - 1) })),
-
-  setEnergyProfile: (energyProfile) =>
-    set((state) => ({ data: { ...state.data, energyProfile } })),
-
-  setReminderStyle: (reminderStyle) =>
-    set((state) => ({ data: { ...state.data, reminderStyle } })),
-
+  setEnergy: (energy) => set({ energy }),
+  setReminderStyle: (reminderStyle) => set({ reminderStyle }),
   toggleGoal: (goal) =>
     set((state) => {
-      const goals = state.data.goals ?? []
-      const exists = goals.includes(goal)
+      const exists = state.goals.includes(goal)
       return {
-        data: {
-          ...state.data,
-          goals: exists ? goals.filter((g) => g !== goal) : [...goals, goal],
-        },
+        goals: exists ? state.goals.filter((g) => g !== goal) : [...state.goals, goal],
       }
     }),
-
-  setAge: (age) => set((state) => ({ data: { ...state.data, age } })),
-
-  reset: () => set({ step: 1, data: { goals: [] } }),
+  setData: (data) =>
+    set((state) => ({
+      energy: data.energy ?? state.energy,
+      reminderStyle: data.reminderStyle ?? state.reminderStyle,
+      goals: data.goals ?? state.goals,
+    })),
+  reset: () => set({ step: 0, energy: 'variable', reminderStyle: 'gentle', goals: [] }),
 }))
