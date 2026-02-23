@@ -9,6 +9,7 @@ export interface MicroStep {
   title: string
   done: boolean
   completedAt?: Date
+  durationMin?: number
 }
 
 export interface Task {

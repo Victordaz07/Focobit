@@ -4,3 +4,4 @@ admin.initializeApp()
 export { onTaskCompleted } from './gamification'
 export { checkStreaksPaused, sendRoutineReminders, sendNightRoutineReminders } from './notifications'
 export { onWeeklyChallengeTick, generateChallengesForUser } from './challenges'
+export { generateMicroSteps } from './ai'

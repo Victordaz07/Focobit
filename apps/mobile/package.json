@@ -12,6 +12,7 @@
   "dependencies": {
     "@focobit/firebase-config": "workspace:*",
     "@focobit/shared": "workspace:*",
+    "@google/generative-ai": "^0.24.1",
     "expo": "~52.0.0",
     "expo-constants": "^18.0.13",
     "expo-device": "^8.0.10",

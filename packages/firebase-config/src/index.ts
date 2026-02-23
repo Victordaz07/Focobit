@@ -15,6 +15,7 @@ export { createUserProfile, getUserProfile, getGamificationProfile } from './use
 export {
   createTask, getUserTasks, subscribeToTasks,
   completeTask, updateTaskStatus,
+  updateTaskMicroSteps, toggleMicroStep,
 } from './taskService'
 export {
   startFocusSession, completeFocusSession, abandonFocusSession,
@@ -35,3 +36,5 @@ export {
   ACHIEVEMENTS_CATALOG,
 } from './achievementsService'
 export type { Achievement } from './achievementsService'
+export { generateMicroStepsForTask } from './aiService'
+export type { AIMicroStep } from './aiService'
