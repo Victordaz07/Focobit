@@ -1,7 +1,5 @@
+import { redirect } from 'next/navigation'
+
 export default function Home() {
-  return (
-    <main>
-      <h1>Focobit</h1>
-    </main>
-  )
+  redirect('/dashboard')
 }

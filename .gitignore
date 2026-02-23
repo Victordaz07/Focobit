@@ -6,6 +6,7 @@ dist/
 lib/
 .next/
 out/
+*.tsbuildinfo
 
 # Expo
 .expo/

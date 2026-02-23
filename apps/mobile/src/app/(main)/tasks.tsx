@@ -1,9 +1,343 @@
-import { View, Text } from 'react-native'
+import { useState, useEffect } from 'react'
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  TextInput, Modal, ActivityIndicator,
+} from 'react-native'
+import { useAuthStore, useTasksStore } from '../../stores'
+import {
+  subscribeToTasks, createTask,
+  completeTask,
+} from '@focobit/firebase-config'
+import { Task, EnergyLevel, TaskPriority, CreateTaskInput } from '@focobit/shared'
 
-export default function Tasks() {
+type FilterTab = 'all' | 'urgent' | 'someday'
+
+export default function TasksScreen() {
+  const { user } = useAuthStore()
+  const { tasks, setTasks } = useTasksStore()
+  const [filter, setFilter] = useState<FilterTab>('all')
+  const [showAdd, setShowAdd] = useState(false)
+  const [showDetail, setShowDetail] = useState<Task | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const uid = user?.uid ?? ''
+
+  useEffect(() => {
+    if (!uid) return
+    const unsub = subscribeToTasks(uid, (t) => {
+      setTasks(t)
+      setLoading(false)
+    })
+    return unsub
+  }, [uid])
+
+  const filtered = tasks.filter(t => {
+    if (filter === 'urgent') return t.priority === 'urgent'
+    if (filter === 'someday') return t.priority === 'someday'
+    return true
+  })
+
+  async function handleComplete(taskId: string) {
+    await completeTask(uid, taskId)
+  }
+
   return (
-    <View>
-      <Text>Tareas</Text>
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading}>Tareas</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)}>
+          <Text style={styles.addBtnText}>+ Nueva</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Filtros */}
+      <View style={styles.filterRow}>
+        {(['all', 'urgent', 'someday'] as FilterTab[]).map(f => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterTab, filter === f && styles.filterTabActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              {f === 'all' ? 'Todas' : f === 'urgent' ? '🔴 Urgente' : '☁️ Algún día'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color="#6C63FF" style={{ marginTop: 48 }} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.list}>
+          {filtered.length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>✅</Text>
+              <Text style={styles.emptyText}>Sin tareas aquí</Text>
+            </View>
+          ) : (
+            filtered.map(task => (
+              <TouchableOpacity
+                key={task.id}
+                style={[styles.taskCard, task.status === 'done' && styles.taskDone]}
+                onPress={() => setShowDetail(task)}
+                onLongPress={() => handleComplete(task.id)}
+              >
+                <View style={styles.taskLeft}>
+                  <TouchableOpacity
+                    style={styles.checkCircle}
+                    onPress={() => handleComplete(task.id)}
+                  >
+                    <Text style={styles.checkIcon}>
+                      {task.status === 'done' ? '✓' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.taskInfo}>
+                    <Text style={[styles.taskTitle, task.status === 'done' && styles.done]}>
+                      {task.title}
+                    </Text>
+                    <Text style={styles.taskMeta}>
+                      {energyLabel(task.energyRequired)}
+                      {task.microSteps.length > 0 &&
+                        `  ·  ${task.microSteps.filter(s => s.done).length}/${task.microSteps.length} pasos`}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.priorityDot}>
+                  {task.priority === 'urgent' ? '🔴' : task.priority === 'someday' ? '☁️' : '🟡'}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* Modal: Agregar tarea */}
+      <AddTaskModal
+        visible={showAdd}
+        uid={uid}
+        onClose={() => setShowAdd(false)}
+      />
+
+      {/* Modal: Detalle de tarea */}
+      {showDetail && (
+        <TaskDetailModal
+          task={showDetail}
+          uid={uid}
+          onClose={() => setShowDetail(null)}
+          onComplete={() => { handleComplete(showDetail.id); setShowDetail(null) }}
+        />
+      )}
     </View>
   )
 }
+
+// ─── Add Task Modal ───────────────────────────────────────────────────────────
+
+function AddTaskModal({
+  visible, uid, onClose,
+}: { visible: boolean; uid: string; onClose: () => void }) {
+  const [title, setTitle] = useState('')
+  const [energy, setEnergy] = useState<EnergyLevel>('medium')
+  const [priority, setPriority] = useState<TaskPriority>('normal')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    if (!title.trim()) return
+    setSaving(true)
+    const input: CreateTaskInput = { title: title.trim(), energyRequired: energy, priority }
+    await createTask(uid, input)
+    setTitle('')
+    setEnergy('medium')
+    setPriority('normal')
+    setSaving(false)
+    onClose()
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={modal.overlay}>
+        <View style={modal.sheet}>
+          <Text style={modal.title}>Nueva tarea</Text>
+
+          <TextInput
+            style={modal.input}
+            placeholder="¿Qué necesitas hacer?"
+            placeholderTextColor="#A7A9BE"
+            value={title}
+            onChangeText={setTitle}
+            autoFocus
+            returnKeyType="done"
+          />
+
+          <Text style={modal.label}>Energía requerida</Text>
+          <View style={modal.row}>
+            {(['low', 'medium', 'high'] as EnergyLevel[]).map(e => (
+              <TouchableOpacity
+                key={e}
+                style={[modal.chip, energy === e && modal.chipActive]}
+                onPress={() => setEnergy(e)}
+              >
+                <Text style={[modal.chipText, energy === e && modal.chipTextActive]}>
+                  {e === 'low' ? '🔋 Baja' : e === 'medium' ? '🔋🔋 Media' : '🔋🔋🔋 Alta'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={modal.label}>Prioridad</Text>
+          <View style={modal.row}>
+            {(['urgent', 'normal', 'someday'] as TaskPriority[]).map(p => (
+              <TouchableOpacity
+                key={p}
+                style={[modal.chip, priority === p && modal.chipActive]}
+                onPress={() => setPriority(p)}
+              >
+                <Text style={[modal.chipText, priority === p && modal.chipTextActive]}>
+                  {p === 'urgent' ? '🔴 Urgente' : p === 'normal' ? '🟡 Normal' : '☁️ Algún día'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={modal.actions}>
+            <TouchableOpacity style={modal.cancelBtn} onPress={onClose}>
+              <Text style={modal.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[modal.saveBtn, (!title.trim() || saving) && modal.saveBtnDisabled]}
+              onPress={handleSave}
+              disabled={!title.trim() || saving}
+            >
+              <Text style={modal.saveText}>{saving ? 'Guardando...' : 'Guardar'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+// ─── Task Detail Modal ────────────────────────────────────────────────────────
+
+function TaskDetailModal({
+  task, uid, onClose, onComplete,
+}: { task: Task; uid: string; onClose: () => void; onComplete: () => void }) {
+  return (
+    <Modal visible transparent animationType="slide">
+      <View style={modal.overlay}>
+        <View style={modal.sheet}>
+          <Text style={modal.title}>{task.title}</Text>
+          <Text style={modal.meta}>
+            {energyLabel(task.energyRequired)}  ·  {priorityLabel(task.priority)}
+          </Text>
+
+          {task.microSteps.length > 0 && (
+            <>
+              <Text style={modal.label}>Micro pasos</Text>
+              {task.microSteps.map(step => (
+                <View key={step.id} style={modal.stepRow}>
+                  <Text style={modal.stepCheck}>{step.done ? '✓' : '○'}</Text>
+                  <Text style={[modal.stepText, step.done && modal.stepDone]}>
+                    {step.title}
+                  </Text>
+                </View>
+              ))}
+            </>
+          )}
+
+          {task.microSteps.length === 0 && (
+            <View style={modal.noSteps}>
+              <Text style={modal.noStepsText}>
+                💡 ¿No sabes por dónde empezar?{'\n'}
+                Los micro pasos llegan en la próxima versión.
+              </Text>
+            </View>
+          )}
+
+          <View style={modal.actions}>
+            <TouchableOpacity style={modal.cancelBtn} onPress={onClose}>
+              <Text style={modal.cancelText}>Cerrar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={modal.saveBtn} onPress={onComplete}>
+              <Text style={modal.saveText}>✓ Completar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function energyLabel(e: EnergyLevel) {
+  return e === 'low' ? '🔋 Baja' : e === 'medium' ? '🔋🔋 Media' : '🔋🔋🔋 Alta'
+}
+function priorityLabel(p: TaskPriority) {
+  return p === 'urgent' ? '🔴 Urgente' : p === 'normal' ? '🟡 Normal' : '☁️ Algún día'
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0F0E17', paddingTop: 56 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
+  heading: { fontSize: 24, fontWeight: '800', color: '#FFFFFF' },
+  addBtn: { backgroundColor: '#6C63FF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  addBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  filterRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  filterTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#1A1A2E' },
+  filterTabActive: { backgroundColor: '#6C63FF' },
+  filterText: { color: '#A7A9BE', fontSize: 13 },
+  filterTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  list: { padding: 20, paddingTop: 0, paddingBottom: 40 },
+  taskCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#1A1A2E', borderRadius: 12, padding: 14, marginBottom: 8,
+  },
+  taskDone: { opacity: 0.4 },
+  taskLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
+  checkCircle: {
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 2, borderColor: '#6C63FF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkIcon: { color: '#6C63FF', fontSize: 13, fontWeight: '700' },
+  taskInfo: { flex: 1 },
+  taskTitle: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
+  done: { textDecorationLine: 'line-through', color: '#A7A9BE' },
+  taskMeta: { color: '#A7A9BE', fontSize: 12, marginTop: 2 },
+  priorityDot: { fontSize: 16 },
+  empty: { alignItems: 'center', marginTop: 60 },
+  emptyEmoji: { fontSize: 40 },
+  emptyText: { color: '#A7A9BE', marginTop: 12, fontSize: 16 },
+})
+
+const modal = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#1A1A2E', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 12 },
+  title: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
+  meta: { color: '#A7A9BE', fontSize: 14, marginBottom: 8 },
+  label: { color: '#A7A9BE', fontSize: 13, fontWeight: '600', marginTop: 4 },
+  input: {
+    backgroundColor: '#0F0E17', borderRadius: 12, padding: 14,
+    color: '#FFFFFF', fontSize: 16, borderWidth: 1, borderColor: '#2A2A40',
+  },
+  row: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#2A2A40', borderWidth: 2, borderColor: 'transparent' },
+  chipActive: { borderColor: '#6C63FF', backgroundColor: '#1E1B3A' },
+  chipText: { color: '#A7A9BE', fontSize: 13 },
+  chipTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#2A2A40', alignItems: 'center' },
+  cancelText: { color: '#A7A9BE', fontWeight: '600' },
+  saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#6C63FF', alignItems: 'center' },
+  saveBtnDisabled: { opacity: 0.4 },
+  saveText: { color: '#FFFFFF', fontWeight: '700' },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  stepCheck: { color: '#6C63FF', fontSize: 16, width: 20 },
+  stepText: { color: '#FFFFFF', fontSize: 15 },
+  stepDone: { textDecorationLine: 'line-through', color: '#A7A9BE' },
+  noSteps: { backgroundColor: '#0F0E17', borderRadius: 12, padding: 16, marginTop: 4 },
+  noStepsText: { color: '#A7A9BE', fontSize: 14, lineHeight: 22, textAlign: 'center' },
+})

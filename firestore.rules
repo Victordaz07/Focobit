@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Usuario solo accede a sus propios datos
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow read: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.title.size() < 200;
+      allow update: if request.auth.uid == userId;
+      allow delete: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/routines/{routineId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/focusSessions/{sessionId} {
+      allow read: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/checkIns/{checkInId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Gamificación: lectura directa, escritura solo via Cloud Functions
+    match /users/{userId}/gamification/{doc} {
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId; // Relajado para MVP, restringir en Fase 2
+    }
+
+    match /users/{userId}/skills/{doc} {
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/achievements/{achievementId} {
+      allow read: if request.auth.uid == userId;
+      allow write: if false; // Solo Cloud Functions
+    }
+
+    match /users/{userId}/challenges/{weekId} {
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
+    }
+  }
+}
