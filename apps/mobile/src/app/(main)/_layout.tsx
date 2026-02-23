@@ -54,6 +54,14 @@ export default function MainLayout() {
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>⚡</Text>,
         }}
       />
+      <Tabs.Screen
+        name="store"
+        options={{
+          title: 'Tienda',
+          headerShown: false,
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🛒</Text>,
+        }}
+      />
     </Tabs>
   )
 }

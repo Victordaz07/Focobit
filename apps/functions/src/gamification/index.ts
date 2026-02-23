@@ -21,9 +21,13 @@ export const onTaskCompleted = functions.firestore
 
     const gam = gamSnap.data()!
     const XP_GAIN = 20
-    const COIN_GAIN = 5
+    let bonusCoins = 5 // base
+    const streakDays = gam.streakDays ?? 0
+    if (streakDays >= 7) bonusCoins = 12
+    else if (streakDays >= 3) bonusCoins = 8
+
     const newXP = (gam.xp ?? 0) + XP_GAIN
-    const newCoins = (gam.coins ?? 0) + COIN_GAIN
+    const newCoins = (gam.coins ?? 0) + bonusCoins
     const newLevel = Math.floor(newXP / 300) + 1
     const leveledUp = newLevel > (gam.level ?? 1)
 

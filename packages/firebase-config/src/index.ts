@@ -46,3 +46,7 @@ export {
   trackOnboardingStep, trackOnboardingCompleted,
   setAnalyticsUser, trackScreen,
 } from './analytics'
+export {
+  getUserStoreData, purchaseItem, equipItem, activatePowerUp,
+} from './storeService'
+export type { PurchaseResult } from './storeService'

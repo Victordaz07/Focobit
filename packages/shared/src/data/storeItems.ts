@@ -1,0 +1,167 @@
+import type { StoreItem } from '../types/store'
+
+export const STORE_ITEMS: StoreItem[] = [
+  // ─── Temas ──────────────────────────────────────────────────
+  {
+    id: 'theme_ocean',
+    title: 'Océano',
+    description: 'Azules profundos que calman la mente',
+    emoji: '🌊',
+    category: 'theme',
+    price: 150,
+  },
+  {
+    id: 'theme_forest',
+    title: 'Bosque',
+    description: 'Verdes relajantes para el foco',
+    emoji: '🌿',
+    category: 'theme',
+    price: 150,
+  },
+  {
+    id: 'theme_sunset',
+    title: 'Atardecer',
+    description: 'Naranjas y rosas para energía creativa',
+    emoji: '🌅',
+    category: 'theme',
+    price: 200,
+  },
+  {
+    id: 'theme_midnight',
+    title: 'Medianoche',
+    description: 'Negro profundo, mínima distracción visual',
+    emoji: '🌑',
+    category: 'theme',
+    price: 200,
+    unlockLevel: 3,
+  },
+  {
+    id: 'theme_aurora',
+    title: 'Aurora',
+    description: 'Colores de aurora boreal, exclusivo nivel 5',
+    emoji: '🌌',
+    category: 'theme',
+    price: 400,
+    unlockLevel: 5,
+  },
+
+  // ─── Avatares ────────────────────────────────────────────────
+  {
+    id: 'avatar_fox',
+    title: 'Zorro',
+    description: 'Rápido y astuto',
+    emoji: '🦊',
+    category: 'avatar',
+    price: 100,
+  },
+  {
+    id: 'avatar_owl',
+    title: 'Búho',
+    description: 'Sabio y paciente',
+    emoji: '🦉',
+    category: 'avatar',
+    price: 100,
+  },
+  {
+    id: 'avatar_rocket',
+    title: 'Cohete',
+    description: 'Siempre al máximo',
+    emoji: '🚀',
+    category: 'avatar',
+    price: 120,
+  },
+  {
+    id: 'avatar_brain',
+    title: 'Cerebro',
+    description: 'El original de Focobit',
+    emoji: '🧠',
+    category: 'avatar',
+    price: 80,
+  },
+  {
+    id: 'avatar_lightning',
+    title: 'Rayo',
+    description: 'Energía pura',
+    emoji: '⚡',
+    category: 'avatar',
+    price: 80,
+  },
+  {
+    id: 'avatar_dragon',
+    title: 'Dragón',
+    description: 'Para los maestros del foco',
+    emoji: '🐉',
+    category: 'avatar',
+    price: 350,
+    unlockLevel: 7,
+  },
+
+  // ─── Power-ups ───────────────────────────────────────────────
+  {
+    id: 'powerup_streak_shield',
+    title: 'Escudo de racha',
+    description: 'Protege tu racha por 1 día si lo olvidas',
+    emoji: '🛡️',
+    category: 'powerup',
+    price: 75,
+  },
+  {
+    id: 'powerup_xp_boost',
+    title: 'Boost XP x2',
+    description: 'Doble XP durante 24 horas',
+    emoji: '⚡',
+    category: 'powerup',
+    price: 120,
+  },
+  {
+    id: 'powerup_focus_extend',
+    title: 'Focus +5min',
+    description: 'Extiende tu próxima sesión 5 minutos gratis',
+    emoji: '⏱️',
+    category: 'powerup',
+    price: 40,
+  },
+  {
+    id: 'powerup_task_skip',
+    title: 'Saltar tarea',
+    description: 'Marca una tarea como hecha sin penalización',
+    emoji: '🎯',
+    category: 'powerup',
+    price: 60,
+  },
+
+  // ─── Badges ──────────────────────────────────────────────────
+  {
+    id: 'badge_fire',
+    title: 'En llamas',
+    description: 'Se muestra en tu perfil',
+    emoji: '🔥',
+    category: 'badge',
+    price: 50,
+  },
+  {
+    id: 'badge_diamond',
+    title: 'Diamante',
+    description: 'Brilla en tu perfil',
+    emoji: '💎',
+    category: 'badge',
+    price: 180,
+    unlockLevel: 4,
+  },
+  {
+    id: 'badge_crown',
+    title: 'Corona',
+    description: 'Para los líderes del foco',
+    emoji: '👑',
+    category: 'badge',
+    price: 300,
+    unlockLevel: 6,
+  },
+]
+
+export const ITEMS_BY_CATEGORY = {
+  theme: STORE_ITEMS.filter(i => i.category === 'theme'),
+  avatar: STORE_ITEMS.filter(i => i.category === 'avatar'),
+  powerup: STORE_ITEMS.filter(i => i.category === 'powerup'),
+  badge: STORE_ITEMS.filter(i => i.category === 'badge'),
+}
