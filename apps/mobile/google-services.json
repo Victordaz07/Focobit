@@ -1,20 +1,46 @@
 {
-  "_comment": "Descarga el google-services.json real desde Firebase Console → Project Settings → Tu app Android",
-  "_instructions": "Coloca este archivo en apps/mobile/ y también en apps/mobile/android/app/",
   "project_info": {
-    "project_number": "TU_PROJECT_NUMBER",
+    "project_number": "910509575953",
     "project_id": "focobit-716b6",
-    "storage_bucket": "focobit-716b6.appspot.com"
+    "storage_bucket": "focobit-716b6.firebasestorage.app"
   },
-  "client": [{
-    "client_info": {
-      "mobilesdk_app_id": "TU_ANDROID_APP_ID",
-      "android_client_info": { "package_name": "com.focobit.app" }
-    },
-    "api_key": [{ "current_key": "TU_API_KEY" }],
-    "services": {
-      "appinvite_service": { "other_platform_oauth_client": [] }
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:910509575953:android:1bd648a7925093d0c586b0",
+        "android_client_info": {
+          "package_name": "com.focobit.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "910509575953-5klqsudbtf85tk7sul628r7h1ihobfpv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_sCyWGwVA27BOfAVCpX_57v_FmeMGvts"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "910509575953-5klqsudbtf85tk7sul628r7h1ihobfpv.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "910509575953-usv8l850sggt4aharr5oq93lquq9n1r9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.focobit.app"
+              }
+            }
+          ]
+        }
+      }
     }
-  }],
+  ],
   "configuration_version": "1"
 }
