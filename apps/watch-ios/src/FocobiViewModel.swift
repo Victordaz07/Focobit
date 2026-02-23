@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import ClockKit
 
 @MainActor
 class FocobiViewModel: ObservableObject {
@@ -25,7 +26,39 @@ class FocobiViewModel: ObservableObject {
         self.tasks = (try? await tasksResult) ?? []
         self.gamProfile = try? await gamResult
         self.isLoading = false
+
+        // Actualizar complication con datos frescos
+        if let gam = self.gamProfile {
+            UserDefaults.standard.set(gam.xp, forKey: "complication_xp")
+            UserDefaults.standard.set(gam.streakDays, forKey: "complication_streak")
+            UserDefaults.standard.set(gam.level, forKey: "complication_level")
+            let server = CLKComplicationServer.sharedInstance()
+            server.activeComplications?.forEach { server.reloadTimeline(for: $0) }
+        }
+
+        // Escuchar actualizaciones de tareas desde iPhone (solo una vez)
+        if !hasTaskObserver {
+            hasTaskObserver = true
+            NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("TaskUpdated"),
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                guard let self = self,
+                      let taskId = notification.userInfo?["taskId"] as? String,
+                      let status = notification.userInfo?["status"] as? String else { return }
+                self.tasks = self.tasks.map { t in
+                    t.id == taskId ? WatchTask(
+                        id: t.id, title: t.title, status: status,
+                        energyRequired: t.energyRequired, priority: t.priority,
+                        microSteps: t.microSteps
+                    ) : t
+                }
+            }
+        }
     }
+
+    private var hasTaskObserver = false
 
     // MARK: - Firestore REST
 
